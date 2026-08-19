@@ -10,12 +10,17 @@
 // without network access. Verify before trusting it.
 
 generator client {
-  provider = "prisma-client-js"
+  // Prisma 7's current generator. The legacy `prisma-client-js` still works in
+  // 7.x but is removed in 8.x, and it writes into node_modules, which hides
+  // staleness. This one emits to a visible path instead.
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Prisma 7: the connection URL lives in prisma.config.ts, not here. The
+  // runtime client gets its connection via a driver adapter (src/lib/db.ts).
 }
 
 // ---------------------------------------------------------------------------

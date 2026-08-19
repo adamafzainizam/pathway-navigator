@@ -2,9 +2,9 @@ import "dotenv/config";
 // ^ REQUIRED. Without this, DATABASE_URL silently falls back to localhost:5432
 //   in standalone scripts. See AGENTS.md §6.
 
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+// Relative, not "@/lib/db": this file runs under tsx outside Next's resolver.
+// src/lib/db.ts is the only place a PrismaClient is constructed.
+import { prisma } from "../src/lib/db";
 
 /**
  * The qualification / MQF backbone.
