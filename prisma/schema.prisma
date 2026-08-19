@@ -1,0 +1,257 @@
+// Pathway Navigator — data model
+//
+// Design principles (see AGENTS.md §2 and docs/decision-log.md):
+//   1. Provenance is NOT NULL. Every rule carries source URL, source date, verified date.
+//   2. Ambiguity is encoded as enum values, never collapsed into booleans.
+//   3. Rules are versioned via effectiveFrom/effectiveTo, never overwritten.
+//   4. Display text is bilingual at the column level; rule logic is language-agnostic.
+//
+// NOTE: this schema has never been run through `prisma validate`. It was written
+// without network access. Verify before trusting it.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum QualificationCategory {
+  SCHOOL
+  PRE_UNIVERSITY
+  SKILLS_CERT
+  DIPLOMA
+  DEGREE
+}
+
+enum AwardingBodyType {
+  MOE
+  MOHE
+  DSD
+  INSTITUTION
+  FOREIGN
+}
+
+enum InstitutionType {
+  PUBLIC_UNI
+  PRIVATE_UNI
+  POLYTECHNIC
+  COMMUNITY_COLLEGE
+  ILP
+  TECHNICAL_INSTITUTE
+  FOREIGN
+}
+
+/// Six values, deliberately. A missing MQA register record is ambiguous — it can
+/// mean provisional accreditation not yet matured to full, the provider never
+/// applied, the programme predates 1997, or accreditation was refused.
+///
+/// NOT_IN_REGISTER means: a search was performed and returned nothing.
+/// UNKNOWN means: nobody has checked yet.
+/// Collapsing these two is how a reference site quietly starts lying.
+enum AccreditationStatus {
+  FULL
+  PROVISIONAL
+  NOT_IN_REGISTER
+  PRE_1997
+  FAILED_ACCREDITATION
+  UNKNOWN
+}
+
+/// CREDIT_TRANSFER and CREDIT_EXEMPTION are NOT the same thing and the difference
+/// costs students a semester: an exemption lets you skip a subject, but the credits
+/// may not count toward graduation, so the student still needs another elective to
+/// reach the required credit hours.
+///
+/// Making this a first-class field forces the UI to surface the distinction.
+/// No existing Malaysian site explains it clearly.
+enum TransferType {
+  DIRECT_ENTRY
+  CREDIT_TRANSFER
+  CREDIT_EXEMPTION
+  APEL_C
+  APEL_A
+  NONE
+}
+
+// ---------------------------------------------------------------------------
+// Core entities
+// ---------------------------------------------------------------------------
+
+/// A KIND of qualification, not an instance held by a person.
+model Qualification {
+  id   String @id @default(cuid())
+  slug String @unique
+
+  nameEn String
+  nameMs String
+
+  /// The spine of the whole system. Everything anchors to MQF level.
+  mqfLevel Int
+
+  category         QualificationCategory
+  awardingBodyType AwardingBodyType
+
+  typicalDurationMonthsMin Int?
+  typicalDurationMonthsMax Int?
+
+  programmes    Programme[]
+  rulesFromHere ProgressionRule[] @relation("RuleFromQualification")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([mqfLevel])
+  @@index([category])
+}
+
+model Institution {
+  id   String @id @default(cuid())
+  slug String @unique
+
+  nameEn String
+  nameMs String
+
+  type  InstitutionType
+  state String?
+
+  /// Link back to the Malaysian Qualifications Register provider entry.
+  mqrProviderRef String?
+
+  /// Institution-wide transfer policy, where one exists. Per-programme rules
+  /// live on ProgressionRule; this is the umbrella document.
+  policySourceUrl      String?
+  policyDocumentDate   DateTime?
+
+  programmes Programme[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@index([state])
+}
+
+/// A specific offering at a specific institution — the thing a student applies to.
+model Programme {
+  id   String @id @default(cuid())
+  slug String
+
+  institutionId   String
+  qualificationId String
+
+  institution   Institution   @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  qualification Qualification @relation(fields: [qualificationId], references: [id], onDelete: Restrict)
+
+  nameEn String
+  nameMs String
+
+  /// v1 restricts this to computing/IT. Widen only after coverage is deep.
+  field String
+
+  mqrRecordUrl        String?
+  accreditationStatus AccreditationStatus @default(UNKNOWN)
+
+  /// Needed to resolve percentage caps into absolute credit numbers.
+  totalCredits   Int?
+  durationMonths Int?
+
+  rulesToHere ProgressionRule[] @relation("RuleToProgramme")
+  rulesFromHere ProgressionRule[] @relation("RuleFromProgramme")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([institutionId, slug])
+  @@index([field])
+  @@index([accreditationStatus])
+}
+
+/// The edge in the graph. This is the actual product.
+model ProgressionRule {
+  id String @id @default(cuid())
+
+  /// Exactly one of fromQualificationId / fromProgrammeId must be set.
+  /// Prisma cannot express this; enforce with a raw CHECK constraint in a
+  /// migration, and with a validation function in src/lib.
+  fromQualificationId String?
+  fromProgrammeId     String?
+  toProgrammeId       String
+
+  fromQualification Qualification? @relation("RuleFromQualification", fields: [fromQualificationId], references: [id], onDelete: Restrict)
+  fromProgramme     Programme?     @relation("RuleFromProgramme", fields: [fromProgrammeId], references: [id], onDelete: Restrict)
+  toProgramme       Programme      @relation("RuleToProgramme", fields: [toProgrammeId], references: [id], onDelete: Restrict)
+
+  transferType TransferType
+
+  /// Nullable because institutions state caps either as a percentage of total
+  /// programme credits or as an absolute number. Some state neither.
+  maxTransferPercent Decimal? @db.Decimal(5, 2)
+  maxTransferCredits Int?
+
+  minimumCgpa Decimal? @db.Decimal(3, 2)
+
+  /// Structured, never free text — free text cannot power the eligibility checker.
+  /// Shape:
+  /// {
+  ///   "subjectCredits": [{ "subject": "Mathematics", "minGrade": "C" }],
+  ///   "minTotalCredits": 3,
+  ///   "mustPass": ["Sejarah"],
+  ///   "other": []
+  /// }
+  requirements Json
+
+  // --- Provenance. All NOT NULL, deliberately. See AGENTS.md §2. ---
+  /// Where this rule was read from.
+  sourceUrl String
+  /// The date printed on the institution's own document.
+  sourceDocumentDate DateTime
+  /// When a human last confirmed this is still current.
+  verifiedOn DateTime
+  /// Drives the admin re-verification queue.
+  recheckDueOn DateTime
+
+  // --- Intake versioning. Never edit history; close a row and add a new one. ---
+  effectiveFrom DateTime
+  /// Null means "current".
+  effectiveTo DateTime?
+
+  caveats Caveat[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([fromQualificationId, effectiveTo])
+  @@index([fromProgrammeId, effectiveTo])
+  @@index([toProgrammeId])
+  @@index([recheckDueOn])
+}
+
+/// Free text, deliberately. This is where the hard ceiling gets encoded:
+/// per-course transfer decisions are made by faculties case-by-case and are
+/// never published. Institutional guidelines say outright that the faculty
+/// reserves the right to determine approval for each course applied for.
+///
+/// Caveats render as VISIBLE WARNINGS on the page, not as fine print.
+model Caveat {
+  id String @id @default(cuid())
+
+  ruleId String
+  rule   ProgressionRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  textEn String
+  textMs String
+
+  /// Higher = more prominent in the UI.
+  severity Int @default(1)
+
+  createdAt DateTime @default(now())
+
+  @@index([ruleId])
+}

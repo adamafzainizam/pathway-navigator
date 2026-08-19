@@ -1,0 +1,19 @@
+{
+  "name": "pathway-navigator",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Mechanical answers about Malaysian education pathways: accreditation, MQF levels, credit transfer caps, APEL routes.",
+  "license": "MIT",
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "seed": "tsx prisma/seed.ts",
+    "test": "node --test --experimental-strip-types src/lib/**/*.test.ts",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio"
+  }
+}
