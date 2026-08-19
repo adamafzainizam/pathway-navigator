@@ -229,13 +229,23 @@ model ProgressionRule {
   minimumCgpa Decimal? @db.Decimal(3, 2)
 
   /// Structured, never free text — free text cannot power the eligibility checker.
-  /// Shape:
+  ///
+  /// The shape originally documented here assumed SPM-style entry requirements
+  /// (subject grades, credits, must-pass subjects). The first real policy
+  /// entered — UTHM's credit transfer guidelines — needed none of those keys.
+  /// Credit transfer rules are about course equivalence, not school subjects:
   /// {
-  ///   "subjectCredits": [{ "subject": "Mathematics", "minGrade": "C" }],
-  ///   "minTotalCredits": 3,
-  ///   "mustPass": ["Sejarah"],
-  ///   "other": []
+  ///   "tier": "Category I (Table 1)",
+  ///   "minCourseGrade": "C+",
+  ///   "minSyllabusSimilarityPercent": 80,
+  ///   "sourceProgrammeMustBeAccredited": true,
+  ///   "applicationWindow": "first semester of study only",
+  ///   "notEligible": ["failed the prior programme"]
   /// }
+  ///
+  /// Both shapes are legitimate — DIRECT_ENTRY rules will look like the first,
+  /// CREDIT_TRANSFER rules like the second. Do NOT unify them prematurely; the
+  /// checker should branch on transferType. See docs/decision-log.md 2026-08-19.
   requirements Json
 
   // --- Provenance. All NOT NULL, deliberately. See AGENTS.md §2. ---

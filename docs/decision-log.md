@@ -172,3 +172,68 @@ drafted levels rather than discarding researched work — but
 `isMqfLevelPresentable()` in `src/lib/rules/mqf-level.ts` returns false for
 them, so a drafted number cannot be rendered as fact. Verified against the live
 database across all six status/level combinations.
+
+### 2026-08-19 — first real institution entered, to test the schema against reality
+
+**Source:** UTHM Credit Transfer Guidelines,
+https://amo.uthm.edu.my/images/UPPP/Credit_Transfer_Guidelines.pdf
+Read in full and transcribed, not summarised. Verified 2026-08-19.
+
+Entered before building the admin form deliberately: a form is a UI wrapped
+around the `requirements` shape, and if a real policy did not fit that shape the
+form would have been built twice. It did not fit. Four findings.
+
+**1. The documented `requirements` shape was wrong for the main use case.**
+The schema described SPM-style entry requirements — `subjectCredits`,
+`minTotalCredits`, `mustPass`. A credit transfer rule needs none of those. What
+UTHM actually publishes is course-equivalence criteria: a minimum grade per
+course (C+), a syllabus similarity threshold (80%), a requirement that the
+source programme be accredited, an application window, and disqualifying
+conditions. The schema comment has been corrected to carry both shapes, with a
+note not to unify them — `DIRECT_ENTRY` rules genuinely do look like the first
+shape. The checker should branch on `transferType`.
+
+**2. A tiered cap does not fit one row.** UTHM's regulation 12 plus Table 1 is a
+single policy with two tiers: up to 30% at minimum grade C+, or up to 50% at
+minimum grade B if the target bachelor programme is MQA-accredited.
+`maxTransferPercent` is a scalar, so this is stored as two `ProgressionRule`
+rows. That works and reads correctly, but it overloads the row: two rows now
+mean either "two independent rules" or "two tiers of one rule", and nothing
+distinguishes them. Acceptable for now — flagged because if tiering turns out
+to be common rather than a UTHM quirk, this wants a `tier` column or a
+parent/child relation rather than a convention buried in the JSON.
+
+**3. `sourceDocumentDate` assumes documents carry dates. This one does not.**
+The UTHM guidelines have no printed date anywhere in eleven pages. The only date
+available is PDF file metadata (`CreationDate` 2022-06-02), which is a much
+weaker claim — it is when the file was generated, not when the policy took
+effect, and a re-export would change it. The column is `NOT NULL`, so the
+metadata date was used and a visible caveat attached saying exactly that.
+
+This is the same class of problem as the MQF levels: a provenance field that
+cannot say how it knows what it knows. **Status: OPEN.** The likely fix is a
+`sourceDateBasis` enum (`PRINTED_ON_DOCUMENT` / `FILE_METADATA` /
+`PAGE_PUBLISHED` / `UNDATED`), matching `MqfStatus` and `AccreditationStatus`.
+Not done unilaterally — it is the third schema change in a day and wants a
+deliberate decision.
+
+**4. What worked.** The nullable columns earned their keep immediately.
+UTHM does not publish this programme's graduating credit total, so
+`totalCredits` is null and the 30%/50% caps cannot be resolved into credit
+figures — and the answer builder says so in words rather than estimating.
+`accreditationStatus` is `UNKNOWN` rather than `NOT_IN_REGISTER`, because the
+MQA register is a frameset over a POST-based ColdFusion search that could not be
+queried: no search was completed, so claiming one returned nothing would be
+false. Both are exactly the distinctions section 7 exists to protect.
+
+**The hard ceiling is now enforced in code, not convention.**
+`src/lib/rules/progression-answer.ts` has no field capable of expressing "you
+will receive N credits" — the only credit figure it can produce is
+`atMostCredits`, floored rather than rounded so a ceiling is never overstated,
+and null whenever it cannot be derived from published figures. A unit test
+asserts no field name on the answer implies an award. Regulation 17 of the UTHM
+document — "the Faculty reserves the right to determine the approval of the
+application for each course applied for" — is stored as a severity-3 caveat,
+which is the exact sentence AGENTS.md section 5 was written around, now
+confirmed verbatim in a real institutional document rather than assumed.
+

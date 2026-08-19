@@ -43,8 +43,9 @@ These are not negotiable without an explicit decision recorded in `docs/decision
 
 ## 3. Current status
 
-**Phase:** Week 0 complete — database live, schema migrated, backbone seeded
-and verified against its source document. Ready for Week 1.
+**Phase:** Week 1 in progress. The data layer is proven end to end: one real
+institution's published policy is in the database and answers a real question
+with sources and caveats attached.
 
 **Done:**
 - [x] Repository structure and documentation
@@ -70,6 +71,10 @@ and verified against its source document. Ready for Week 1.
 - [x] Second CHECK constraint tying level to status, verified live across all six combinations
 - [x] 15 unit tests passing across two pure rule modules
 
+- [x] First real institution entered: UTHM, 1 programme, 2 rules, 9 caveats
+- [x] **Success test passed** — a real progression question answered from the database with sources attached (`npx tsx scripts/ask.ts`)
+- [x] Hard ceiling enforced in code: the answer type cannot express "you will receive N credits"
+
 **Current qualification data:** 3 `ASSIGNED` (verified against the MQF
 document), 4 `NOT_IN_FRAMEWORK` (verified — MQA deliberately assigns no level),
 6 `UNKNOWN` (TVET rows carrying drafted levels that no source has confirmed).
@@ -79,27 +84,39 @@ Nothing in the database now claims an MQF level it cannot support.
 
 ## 4. Next up
 
-**Data debt to clear when convenient (does not block Week 1):**
+**Decide first — third schema gap found by contact with real data.**
+
+1. **How should provenance record *how* it knows a document's date?**
+   `sourceDocumentDate` is `NOT NULL` and defined as "the date printed on the
+   institution's own document". The UTHM guidelines have no printed date at all;
+   PDF file metadata was used instead, which is a materially weaker claim. Same
+   shape of problem as `MqfStatus`. Likely fix is a `sourceDateBasis` enum
+   (`PRINTED_ON_DOCUMENT` / `FILE_METADATA` / `PAGE_PUBLISHED` / `UNDATED`).
+   Recorded OPEN in `docs/decision-log.md` (2026-08-19).
+
+**Then continue Week 1–2:**
+
+2. **Enter 2–4 more institutions**, ideally ones whose policies are shaped
+   differently from UTHM's — an absolute credit cap rather than a percentage, and
+   a private university, to find the next place the model bends. Use
+   `scripts/import-uthm.ts` as the pattern.
+3. **Build the admin entry form.** Deferred until now on purpose, and the delay
+   paid: the `requirements` shape it would have been built around was wrong.
+   Use the pure validators in `src/lib/rules/` — never let Postgres be the error
+   surface.
+
+**Data debt (does not block):**
 
 - **Source the six TVET rows from JPK.** `skm-1/2/3`, `dkm`, `dlkm` and `kv` are
-  `UNKNOWN`: their levels are drafted, and the MQF document names no TVET
-  qualification at all, so MQA is the wrong source for them. `kv` needs
-  splitting — it currently conflates Sijil Vokasional Malaysia with Diploma
-  Vokasional Malaysia, which are different awards. When fixed, set
-  `mqfStatus` to `ASSIGNED` and record the source and date in the decision log.
-
-**Week 1–2 target:** admin entry form + 3–5 institutions' rules entered end to
-end. The `Institution`, `Programme` and `ProgressionRule` tables are empty.
-
-**Success test:** one real progression question answered correctly from the
-database, with sources attached.
-
-**When building the admin form**, use the pure validators in `src/lib/rules/`
-rather than letting Postgres be the error surface — both CHECK constraints have
-a mirror there, and both return typed results instead of throwing.
+  `UNKNOWN`. `kv` also conflates Sijil Vokasional Malaysia with Diploma
+  Vokasional Malaysia — different awards, needs splitting into two rows.
+- **UTHM programme gaps.** `totalCredits` is null (not published on the
+  programme page, so percentage caps cannot be resolved into credit figures) and
+  `accreditationStatus` is `UNKNOWN` (the MQA register could not be queried —
+  see section 6).
 
 **Explicitly deferred:** public UI, SEO pages, the interactive checker,
-study-abroad data. Do not start these before the data layer is proven.
+study-abroad data.
 
 The root layout and `src/app/page.tsx` are deliberately a placeholder, and
 `lang` is hardcoded to `en`. When route-level i18n lands, the layout becomes a
@@ -186,6 +203,17 @@ Each of these was hit and verified on 2026-08-19, not inherited.
   esbuild `TransformError`, not a Node error. Wrap script bodies in an
   `async main()` the way `prisma/seed.ts` does.
 
+- **The MQA register (MQR) cannot be queried programmatically.**
+  `www2.mqa.gov.my/mqr/` is a frameset wrapping a POST-based ColdFusion search;
+  there is no URL pattern that returns a programme record. Consequence for data
+  entry: accreditation must be checked by hand, and until it is, the status is
+  `UNKNOWN` — never `NOT_IN_REGISTER`, which asserts a search was performed.
+
+- **Institutional policy PDFs are often undated.** UTHM's eleven-page credit
+  transfer guidelines carry no printed date. `pdfinfo` metadata is the fallback,
+  but `CreationDate` is when the file was exported, not when the policy took
+  effect. Always run `pdfinfo` and record which kind of date you got.
+
 - **Neon free-tier compute suspends when idle, and the first command after that
   fails with `P1001: Can't reach database server`.** It reads like a wrong host
   or a dead database; it is neither. The connection attempt itself wakes the
@@ -270,6 +298,7 @@ Append a short entry per working session. Newest at the bottom.
 | 2026-08-19 | Claude (Claude Code) | `git init`. Next 16.3.1 scaffold merged. Deps installed. Prisma 7 wired up (`prisma.config.ts`, `prisma-client` generator, Neon driver adapter in `src/lib/db.ts`). `prisma validate` passes, build/typecheck/lint pass, dev server serves `/`. **Stopped at: Neon project not created, no migration run.** |
 | 2026-08-19 | Claude (Claude Code) | Neon project created (Singapore, PG 18.6), `development` + `preview` branches. First migration applied with hand-written CHECK constraint, verified live. Pure mirror + 7 tests in `src/lib/rules/`. Seeded 13 qualifications. **MQF levels verified against the MQF 2nd Edition — four seed rows are wrong and need a schema decision before they can be fixed.** |
 | 2026-08-19 | Claude (Claude Code) | Resolved the MQF modelling problem: `mqfLevel` nullable + `MqfStatus` enum + CHECK constraint, migration `mqf_status`. Four wrong rows corrected, six TVET rows flagged `UNKNOWN`. Pure mirror in `src/lib/rules/mqf-level.ts`, 15 tests passing. Week 0 done. |
+| 2026-08-19 | Claude (Claude Code) | GitHub repo created (private, `adamafzainizam`), PR #1 merged. First real institution entered: UTHM credit transfer guidelines, 2 tiered rules, 9 caveats. Pure answer builder + 25 tests; the hard ceiling is now a type constraint, not a convention. **Success test passed.** Found a third schema gap: `sourceDocumentDate` cannot say how it knows the date. |
 
 <!-- BEGIN:nextjs-agent-rules -->
 
