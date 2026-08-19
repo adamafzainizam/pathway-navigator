@@ -2,30 +2,42 @@
 
 > **Working name.** The public-facing name is not yet chosen and will likely be in Bahasa Melayu — see `docs/seo.md`.
 
-A tool for answering the *mechanical* questions about Malaysian education pathways.
+A bilingual decoder for the Malaysian credit transfer process.
 
-Not "what should I do after SPM" — there is no shortage of that content, and every institution in Malaysia publishes one as marketing. This answers the harder questions those guides skip:
+Not "what should I do after SPM" — there is no shortage of that content, and every institution publishes one as marketing. This answers the questions those guides skip:
 
+- When this university says **exemption**, does that mean I get the credit, or that I have to take another subject instead? (It depends on the university. They contradict each other.)
+- Which step in this process quietly disqualifies me if I miss it?
 - Is this programme actually accredited, and therefore transferable at all?
-- What MQF level does my qualification sit at, and what does that let me enter?
-- What is *this* university's credit transfer cap?
-- Is this route a credit **transfer** or a credit **exemption**? (They are not the same thing, and the difference can cost a semester.)
-- Does APEL apply to me, and which kind?
-- What do I actually need to prepare, and who do I ask?
+- What does this institution simply not publish — and what does that mean for planning?
+- Where does the published information stop and the faculty's discretion begin?
 
 ---
 
 ## Status
 
-**Week 0 — scaffold verified, database not yet created.** The app builds and runs
-locally and the Prisma schema validates, but no migration has been applied and
-there is no data. See `AGENTS.md` for current status and next steps.
+**Early. Data layer working, no public UI yet.** Three institutions' policies
+are in the database and answer real questions with sources and caveats attached;
+there are no pages to read them on. Data entry is deliberately paused while the
+scope is narrowed. See [`AGENTS.md`](AGENTS.md) for current status.
 
 ## Why this exists
 
-That information does exist. It's just scattered across a government register and hundreds of institutional PDFs, and no one has assembled it into something queryable.
+Existing Malaysian guides assert things like *"lulusan Diploma berpeluang dikecualikan daripada Tahun 1"* with no way for a reader to check whether it applies to **their** diploma at **their** target university.
 
-Existing Malaysian guides assert things like *"lulusan Diploma berpeluang dikecualikan daripada Tahun 1"* with no way for a reader to check whether it applies to **their** diploma at **their** target university. Closing that gap is the whole point.
+The most concrete example found so far, from the institutions' own documents:
+
+> **Universiti Malaya:** a course exemption *"will not result in a student obtaining credit for the course which is exempted"*, and the exempted course *"shall be replaced with another course"*.
+>
+> **UTHM:** *"Credit Exemption — Credit Transfer Without Grade"*, where the credit **is** counted toward graduation.
+
+Two public universities, one phrase, opposite meanings. A student who learns the word at one is wrong at the other, and the difference is a subject you either do or do not have to take. No guide in either language explains this.
+
+That is the gap: not that the rules are hidden, but that they are written in vocabulary that is not consistent between the institutions using it.
+
+### What this project no longer claims
+
+The original premise was that credit transfer **caps** vary per institution and needed collecting. Three institutions disproved that — UTHM, UM and MMU all restate the same tiered 30%/50% structure, because it descends from Ministry of Higher Education and MQA policy rather than institutional choice. The finding, and what it changed, is recorded in [the decision log](docs/decision-log.md).
 
 ## What it deliberately does not do
 

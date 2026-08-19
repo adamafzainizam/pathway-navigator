@@ -5,41 +5,70 @@ Part of this project — see the main [README](../README.md) and [AGENTS.md](../
 
 ## The v1 slice
 
-Be ruthless. The single most important scoping decision is **one field only: Computing / IT / Software Engineering.** It's the field already understood from the inside, it has high student volume, and it keeps the data grind finite.
+**Revised 2026-08-19.** The original slice targeted 15–20 institutions. That was
+built on the assumption that credit transfer caps vary per institution, which
+three institutions disproved — the caps descend from MOHE/MQA policy and are
+largely uniform. See [decision log](./decision-log.md).
 
-**Coverage target:**
-- ~15–20 institutions — a mix of public universities, private universities, polytechnics, and GMI-type technical institutes
-- All entry qualifications: SPM, STPM, Matrikulasi, Asasi/Foundation, KV, Sijil Kemahiran, Diploma, Advanced Diploma
-- Both query directions: *"I have X, where can I go?"* and *"I want Y, how do I get there?"*
+Still ruthless, still **one field only: Computing / IT / Software Engineering.**
 
-**What v1 explicitly does NOT do:** promise credit counts, predict admission outcomes, or cover study abroad. Those are later — see study-abroad expansion (see AGENTS.md).
+**Coverage target, restated:** roughly **5–8 institutions, documented
+exhaustively**, rather than 15–20 documented shallowly. The metric is no longer
+institutions covered. It is:
+
+- **terms disambiguated** — every place two institutions use the same word to
+  mean different things, with both source quotes;
+- **process traps documented** — deadlines, non-transferring prerequisites,
+  discretionary overrides;
+- **published gaps recorded** — what an institution does not state, made visible
+  rather than silently absent.
+
+**Both query directions still matter** (*"I have X, where can I go?"* and *"I
+want Y, how do I get there?"*), but they are now secondary to *"what does this
+actually mean and what will trip me up?"*.
+
+**What v1 explicitly does NOT do:** promise credit counts, predict admission
+outcomes, or cover study abroad.
 
 ## Fortnightly plan
 
-### Weeks 1–2 — Data foundation, no UI
-Schema, the qualification/MQF backbone seeded, the register ingestion path, and 3–5 institutions' rules entered by hand end to end. Ship a CLI or admin view only.
+Weeks 0–1 are done: scaffold verified, database live, three institutions
+entered, and the thesis revised on the evidence they produced.
 
-**Success test:** one real progression question answered correctly from the database, with sources attached.
+### Next — explain what is already held, before collecting more
+The terminology decoder: each term as each institution defines it, side by side,
+with source quotes. Then the first bilingual public page type, with every claim
+carrying its source and verification date.
 
-The temptation is to build pretty pages first. Resist it — if the data model is wrong, everything downstream is rework. Also build the admin entry tooling here (see the Prisma schema (`prisma/schema.prisma`)), because hundreds of rules entered via raw SQL will accumulate transcription errors.
+**Success test:** a reader who does not know the difference between credit
+transfer and course exemption can read one page and afterwards know which one
+their target university means.
 
-### Weeks 3–4 — Core query + first public pages
-The graph traversal: given a qualification, return reachable programmes with rules and caveats attached. Then two server-rendered page types with proper URLs:
-- `/kelayakan/[slug]` — "I have SPM, what now?"
-- `/laluan/[from]/[to]` — the programmatic SEO workhorse
+Data entry stays paused throughout. Three institutions already hold more
+unexplained material than the site can present.
 
-Tag `v0.1` when a stranger can land on a pathway page and get a correct, sourced answer.
+### Then — coverage, in the new shape
+Resume entry toward 5–8 institutions, collecting terminology and process traps
+first and caps second. Alternate deliberately between entry days and build days.
+Build the **re-verification queue** in this phase, not later — every rule carries
+a recheck-due date and that queue is what stops the dataset rotting.
 
-### Weeks 5–6 — Coverage + interactive layer
-Grind institutions from 5 → 20. In parallel, build the guided flow (enter actual results → filtered eligible pathways) and comparison views.
+### Then — trust, SEO, launch
+Source citations rendered on every claim. Disclaimers ported from the
+predecessor project. Schema.org markup, sitemap, performance pass, deploy.
 
-This fortnight needs deliberate alternation between data-entry days and build days, or one of them eats the other. Also build the **re-verification queue** here — every rule carries a recheck-due date, and that queue is what keeps the dataset from silently rotting.
+### Buffer + case study
+Everything above will slip. Then README, screenshots and the written case study —
+the recruiter-facing artifact. The revision of the thesis belongs in that case
+study: a project that tested its own premise and changed it is a better story
+than one that never checked.
 
-### Weeks 7–8 — Trust, SEO, launch
-Source citations rendered on every claim. Disclaimers (port directly from the predecessor project's legal pages). Schema.org markup, sitemap generation from pathway combinations, performance pass, deploy.
+## Before coverage grows: answer the maintenance question
 
-### Weeks 9–10 — Buffer + case study
-Weeks 1–8 will slip; this is where that lands. Then README, screenshots, and the written case study — the recruiter-facing artifact, same as Week 8 of the marketplace project.
+Every rule carries `recheckDueOn`, and policies change per intake. Six rules
+exist today. Decide honestly how many rules one person can re-verify per intake
+before deciding how many to create — a stale reference site is worse than a
+small one, and this is the constraint most likely to kill the project quietly.
 
 ## Technical decisions worth making now
 

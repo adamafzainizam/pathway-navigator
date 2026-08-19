@@ -325,3 +325,50 @@ answer.
   SUBMISSION" because it was made from a reused template. Any pipeline that
   trusts PDF metadata to identify documents will mis-file it.
 
+### 2026-08-19 — thesis narrowed to the decoder; data entry paused
+
+**Decision.** The project stops being a per-institution cap lookup and becomes a
+bilingual decoder for the credit transfer process: what the words mean at a given
+institution, which steps disqualify you, and where published information stops.
+Coverage target drops from 15–20 institutions to 5–8 documented exhaustively.
+Data entry is paused until the pages explaining the existing three exist.
+
+**Why.** The entry above. Caps are a national MOHE/MQA baseline that institutions
+restate, so the axis the product was organised around carries little information.
+The axes that do carry information — contradictory vocabulary, process traps,
+publication gaps — are denser per institution, which means fewer institutions
+studied harder, not more studied lightly.
+
+**What was rejected.**
+
+*Continue as scoped* (push to 15–20 institutions): coverage might reveal variance
+that three institutions hide. Rejected because the mechanism is documented rather
+than inferred — MMU states its policy exists to align with MOHE — so more rows
+would most likely buy more copies of the same number, at the highest cost per row
+of any option.
+
+*Shrink to a single explainer page*: much of the reader value, almost none of the
+maintenance. Rejected because the terminology contradiction is only demonstrable
+by holding both institutions' definitions side by side with provenance, which is
+a dataset even if a small one, and because it would discard working
+infrastructure that is already correct.
+
+*Stop and write it up*: defensible — the findings stand on their own. Rejected
+because the decoder is a real gap that has now been evidenced rather than
+assumed, and the cost of testing it is weeks rather than months.
+
+**The moat claim is also corrected.** `AGENTS.md` §1 and the README claimed an AI
+content farm could not generate this dataset because it is not in prose anywhere.
+An AI extracted three institutional policies from PDFs in an afternoon during
+this session, so extraction is plainly not the barrier. The defensible
+differentiator is behavioural: distinguishing `UNKNOWN` from `NOT_IN_REGISTER`,
+refusing to state an MQF level MQA declines to assign, recording that a document
+carries no date. A content farm will not do those things because they make output
+look less confident. Both files now say this.
+
+**Unresolved, and flagged as the likeliest cause of failure.** Every rule carries
+`recheckDueOn` and policies change per intake. Nobody has established how many
+rules one person can honestly re-verify per intake. That number, not build speed,
+sets the maximum sustainable size of the dataset, and it should be decided before
+coverage grows rather than discovered when rows go stale.
+
