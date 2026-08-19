@@ -153,6 +153,22 @@ Collapsing the second into a plausible-looking integer is how a reference site
 starts lying, and it would be load-bearing: MQF level is described in AGENTS.md
 section 1 as the spine every progression rule resolves against.
 
-**Status: OPEN.** No schema change made and no seed row edited — this needs a
-decision, recorded here before it is acted on. The seeded data currently in the
-development branch still contains the four wrong levels.
+**Status: RESOLVED, same day.** `mqfLevel` becomes `Int?` and a new `MqfStatus`
+enum (`ASSIGNED` / `NOT_IN_FRAMEWORK` / `UNKNOWN`) carries how far each row has
+been checked — deliberately the same three-state shape as
+`accreditationStatus`, for the same reason.
+
+Rejected: making `mqfLevel` nullable *without* the enum. Null would then mean
+both "MQA excludes it" and "nobody has looked", which is precisely the
+`NOT_IN_REGISTER` / `UNKNOWN` collapse section 7 forbids. Also rejected:
+dropping the four rows to keep the column `NOT NULL`. SPM and STPM are where
+most users start, so a `ProgressionRule` could then never originate from SPM —
+that removes the product's primary question to preserve a schema convenience.
+
+A CHECK constraint (`Qualification_mqf_level_matches_status`) ties the two
+columns together: `ASSIGNED` requires a level, `NOT_IN_FRAMEWORK` forbids one.
+`UNKNOWN` is left unconstrained on purpose, so the six TVET rows keep their
+drafted levels rather than discarding researched work — but
+`isMqfLevelPresentable()` in `src/lib/rules/mqf-level.ts` returns false for
+them, so a drafted number cannot be rendered as fact. Verified against the live
+database across all six status/level combinations.

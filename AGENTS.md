@@ -43,8 +43,8 @@ These are not negotiable without an explicit decision recorded in `docs/decision
 
 ## 3. Current status
 
-**Phase:** Week 0 — database live, schema migrated, backbone seeded.
-Blocked on one data-modelling decision (see section 4).
+**Phase:** Week 0 complete — database live, schema migrated, backbone seeded
+and verified against its source document. Ready for Week 1.
 
 **Done:**
 - [x] Repository structure and documentation
@@ -66,39 +66,37 @@ Blocked on one data-modelling decision (see section 4).
 
 **Not started:** institutions, programmes, progression rules, admin UI.
 
-**One thing is knowingly wrong in the database right now.** The MQF verification
-found that four of the thirteen seeded qualifications (`spm`, `stpm`,
-`matrikulasi`, `asasi`) assert an MQF level that MQA explicitly declines to
-assign — the framework says outright that STPM, Matriculation and foundation
-programmes "are not included in the Framework". The rows are still in the
-development branch as seeded. Fixing them needs a schema decision, not a data
-edit, because `mqfLevel` is `Int NOT NULL` and cannot represent "deliberately
-outside the framework". Full findings and quotes: `docs/decision-log.md`,
-entry dated 2026-08-19.
+- [x] `mqfLevel` made nullable, `MqfStatus` enum added, four wrong rows corrected
+- [x] Second CHECK constraint tying level to status, verified live across all six combinations
+- [x] 15 unit tests passing across two pure rule modules
+
+**Current qualification data:** 3 `ASSIGNED` (verified against the MQF
+document), 4 `NOT_IN_FRAMEWORK` (verified — MQA deliberately assigns no level),
+6 `UNKNOWN` (TVET rows carrying drafted levels that no source has confirmed).
+Nothing in the database now claims an MQF level it cannot support.
 
 ---
 
 ## 4. Next up
 
-**Decide first — everything else builds on it.**
+**Data debt to clear when convenient (does not block Week 1):**
 
-1. **How should `Qualification` represent "no MQF level"?** `mqfLevel` is
-   currently `Int NOT NULL`, so SPM, STPM, Matriculation and Asasi are all
-   forced to claim a level the framework refuses to give them. Needs the same
-   three-state treatment `accreditationStatus` already gets: assigned /
-   checked-and-outside-the-framework / nobody-has-looked. Options and the
-   reasoning are in `docs/decision-log.md` (2026-08-19, status OPEN). Once
-   decided: migration, re-seed, and re-verify.
-2. **Source the TVET rows properly.** `skm-1/2/3`, `dkm`, `dlkm` and `kv` are
-   unverified — the MQF document names no TVET qualification at all. They need
-   a JPK (Jabatan Pembangunan Kemahiran) citation on their own terms. `kv` is
-   the worst of them: it collapses Sijil Vokasional Malaysia and Diploma
-   Vokasional Malaysia, which are different awards at different levels.
+- **Source the six TVET rows from JPK.** `skm-1/2/3`, `dkm`, `dlkm` and `kv` are
+  `UNKNOWN`: their levels are drafted, and the MQF document names no TVET
+  qualification at all, so MQA is the wrong source for them. `kv` needs
+  splitting — it currently conflates Sijil Vokasional Malaysia with Diploma
+  Vokasional Malaysia, which are different awards. When fixed, set
+  `mqfStatus` to `ASSIGNED` and record the source and date in the decision log.
 
-**Then Weeks 1–2 as planned:** admin entry form + 3–5 institutions' rules
-entered end to end.
+**Week 1–2 target:** admin entry form + 3–5 institutions' rules entered end to
+end. The `Institution`, `Programme` and `ProgressionRule` tables are empty.
+
 **Success test:** one real progression question answered correctly from the
 database, with sources attached.
+
+**When building the admin form**, use the pure validators in `src/lib/rules/`
+rather than letting Postgres be the error surface — both CHECK constraints have
+a mirror there, and both return typed results instead of throwing.
 
 **Explicitly deferred:** public UI, SEO pages, the interactive checker,
 study-abroad data. Do not start these before the data layer is proven.
@@ -188,6 +186,12 @@ Each of these was hit and verified on 2026-08-19, not inherited.
   esbuild `TransformError`, not a Node error. Wrap script bodies in an
   `async main()` the way `prisma/seed.ts` does.
 
+- **Neon free-tier compute suspends when idle, and the first command after that
+  fails with `P1001: Can't reach database server`.** It reads like a wrong host
+  or a dead database; it is neither. The connection attempt itself wakes the
+  compute, so simply running the same command again succeeds. Hit twice in one
+  session. Do not go debugging the connection string over this — retry first.
+
 - **Neon's pooled connection is fine for `prisma migrate dev`.** Worth recording
   because the opposite is widely assumed: PgBouncer in transaction mode cannot
   run `CREATE DATABASE`, so shadow-database creation was expected to fail. It
@@ -265,6 +269,7 @@ Append a short entry per working session. Newest at the bottom.
 | (scaffold) | Claude (chat) | Repository created: docs, schema draft, no code run |
 | 2026-08-19 | Claude (Claude Code) | `git init`. Next 16.3.1 scaffold merged. Deps installed. Prisma 7 wired up (`prisma.config.ts`, `prisma-client` generator, Neon driver adapter in `src/lib/db.ts`). `prisma validate` passes, build/typecheck/lint pass, dev server serves `/`. **Stopped at: Neon project not created, no migration run.** |
 | 2026-08-19 | Claude (Claude Code) | Neon project created (Singapore, PG 18.6), `development` + `preview` branches. First migration applied with hand-written CHECK constraint, verified live. Pure mirror + 7 tests in `src/lib/rules/`. Seeded 13 qualifications. **MQF levels verified against the MQF 2nd Edition — four seed rows are wrong and need a schema decision before they can be fixed.** |
+| 2026-08-19 | Claude (Claude Code) | Resolved the MQF modelling problem: `mqfLevel` nullable + `MqfStatus` enum + CHECK constraint, migration `mqf_status`. Four wrong rows corrected, six TVET rows flagged `UNKNOWN`. Pure mirror in `src/lib/rules/mqf-level.ts`, 15 tests passing. Week 0 done. |
 
 <!-- BEGIN:nextjs-agent-rules -->
 
