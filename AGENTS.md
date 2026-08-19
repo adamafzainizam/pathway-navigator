@@ -18,13 +18,55 @@
 
 ## 1. What this project is
 
-A tool answering the *mechanical* questions about Malaysian education pathways: what a given qualification actually gets you, at which institution, with what credit transfer, under what rules.
+A bilingual decoder for the Malaysian credit transfer process: what the words
+actually mean at a given institution, which steps quietly disqualify you, and
+where the published information stops.
 
-**Not** another "what to do after SPM" guide. Every institution in Malaysia publishes one as marketing. The gap is the mechanics layer — accreditation status, MQF levels, per-institution transfer caps, transfer-vs-exemption, APEL routes — which exists only as scattered institutional PDFs and a government register.
+**Not** another "what to do after SPM" guide. Every institution publishes one as
+marketing.
 
-**The product is the structured dataset.** The web app is how it's queried. An AI content farm cannot generate this dataset because it isn't in prose anywhere; that's the moat.
+**Also not — any more — a per-institution cap lookup.** That was the original
+thesis and three institutions disproved it. UTHM, UM and MMU all restate the
+same tiered 30%/50% structure, because it descends from MOHE and MQA policy
+rather than from institutional choice; MMU's document says so on page 1. A
+database whose main axis is "look up your university's cap" answers a question
+whose answer is one sentence and mostly the same everywhere. Evidence and
+reasoning: `docs/decision-log.md`, 2026-08-19.
 
-**Working name:** Pathway Navigator. This is a placeholder — the public-facing name is not yet chosen and should probably be Bahasa Melayu, since that's where the SEO opening is (see `docs/seo.md`).
+**What actually varies, and is therefore worth collecting:**
+
+1. **The vocabulary is contradictory between institutions.** UM defines a course
+   exemption as giving *no credit*, requiring the course be replaced. UTHM's
+   glossary defines credit exemption as credit transfer *without grade*, where
+   the credit *does* count toward graduation. Same phrase, opposite meanings,
+   two public universities. A student who learns the term at one is wrong at the
+   other, and no guide in either language explains this.
+2. **Process traps.** UTHM refuses credit transfer applications made after the
+   first semester, outright. Prerequisites do not transfer automatically at UM. A
+   faculty may raise the minimum grade with Senate permission. Each of these
+   costs real time and none is prominent in any prospectus.
+3. **What is not published at all.** UTHM and MMU do not publish graduating
+   credit totals, so their percentage caps cannot be converted into credits by
+   anyone, including us. UM publishes 128, so its caps resolve to 38 and 64.
+4. **Whether a claim can be trusted**, and how stale it is.
+
+**The product is a small, deeply verified dataset plus the explanation of what
+it means.** Coverage is measured in terms disambiguated and traps documented,
+not in institution count. Depth over breadth is not a compromise here — breadth
+was tested and found to be mostly repetition.
+
+**On the moat.** The README used to claim an AI content farm could not generate
+this because it is not in prose anywhere. That is now known to be too
+comfortable: an AI extracted three institutional policies from PDFs in an
+afternoon. Extraction is not the hard part. What is not easily copied is the
+discipline — `UNKNOWN` versus `NOT_IN_REGISTER`, refusing to state an MQF level
+MQA declines to assign, recording that a document has no date. A content farm
+will not do that, because doing it makes the output look less confident. That is
+the real differentiator and it is a behavioural one, not a data one.
+
+**Working name:** Pathway Navigator. Placeholder; the public name is not chosen
+and should probably be Bahasa Melayu (see `docs/seo.md`). Note the working name
+now describes the old thesis better than the current one.
 
 ---
 
@@ -92,32 +134,41 @@ Nothing in the database now claims an MQF level it cannot support.
 
 ## 4. Next up
 
-1. **Decide what this dataset is actually for.** Entering UM and MMU showed the
-   diploma→bachelor caps are a *national* MOHE/MQA baseline restated by each
-   institution, not a per-institution variable — UM and MMU are identical, UTHM
-   differs by one grade step. §1 names "per-institution transfer caps" as a core
-   part of the gap; on this evidence that part is thin. What does vary is
-   terminology (institutions define "exemption" in contradictory ways), process
-   detail, and what each institution declines to publish. Full evidence in
-   `docs/decision-log.md` (2026-08-19). This is a product question, not a
-   technical one, and it should be settled before more data entry.
-2. **Build the admin entry form.** Deferred until now on purpose, and the delay
-   paid: the `requirements` shape it would have been built around was wrong.
-   Use the pure validators in `src/lib/rules/` — never let Postgres be the error
-   surface.
+**Direction settled 2026-08-19: narrow to the decoder. Data entry is PAUSED.**
+Do not add institutions until the pages that explain the existing data exist.
+Three institutions already contain more unexplained material than the site can
+currently present, and adding a fourth does not change that.
 
-**Data debt (does not block):**
+1. **Write the terminology decoder.** The credit-transfer / credit-exemption /
+   transfer-with-grade / transfer-without-grade tangle, shown as what each term
+   means *at each institution we hold*, side by side, with the source quote. This
+   is the highest-value thing in the dataset and it currently exists only as a
+   severity-3 caveat string.
+2. **Then the first public page type**, bilingual, server-rendered, with every
+   claim carrying its source and verification date. One page done properly beats
+   five stubs.
+3. **Then, and only then, resume data entry** — and when resuming, collect
+   terminology and process traps first, caps second. `scripts/import-uthm.ts`,
+   `import-um.ts` and `import-mmu.ts` are the pattern.
 
-- **Source the six TVET rows from JPK.** `skm-1/2/3`, `dkm`, `dlkm` and `kv` are
-  `UNKNOWN`. `kv` also conflates Sijil Vokasional Malaysia with Diploma
-  Vokasional Malaysia — different awards, needs splitting into two rows.
-- **UTHM programme gaps.** `totalCredits` is null (not published on the
-  programme page, so percentage caps cannot be resolved into credit figures) and
-  `accreditationStatus` is `UNKNOWN` (the MQA register could not be queried —
-  see section 6).
+**Known data debt (deliberately not blocking):**
 
-**Explicitly deferred:** public UI, SEO pages, the interactive checker,
-study-abroad data.
+- Six TVET qualification rows are `UNKNOWN` and need a JPK source; `kv`
+  conflates Sijil Vokasional Malaysia with Diploma Vokasional Malaysia.
+- `Programme.nameMs` holds English text for UM and MMU because neither publishes
+  a Malay programme name. Visibly wrong to a Malay reader; inventing an official
+  award title would be worse. Needs sourcing, not translating.
+- All three programmes are `accreditationStatus: UNKNOWN` — the MQA register
+  cannot be queried programmatically (section 6).
+- `Institution.state` cannot represent MMU's two campuses and is null.
+
+**The maintenance question is the real risk, and it is not answered.** Every rule
+carries `recheckDueOn`. Six rules are due in six months. Before coverage grows,
+decide honestly how many rules one person can re-verify per intake — a stale
+reference site is worse than a small one.
+
+**Explicitly deferred:** the interactive checker, study-abroad data, the admin
+entry form (defer it further — its shape depends on what the decoder needs).
 
 The root layout and `src/app/page.tsx` are deliberately a placeholder, and
 `lang` is hardcoded to `en`. When route-level i18n lands, the layout becomes a
@@ -300,6 +351,7 @@ Append a short entry per working session. Newest at the bottom.
 | 2026-08-19 | Claude (Claude Code) | Neon project created (Singapore, PG 18.6), `development` + `preview` branches. First migration applied with hand-written CHECK constraint, verified live. Pure mirror + 7 tests in `src/lib/rules/`. Seeded 13 qualifications. **MQF levels verified against the MQF 2nd Edition — four seed rows are wrong and need a schema decision before they can be fixed.** |
 | 2026-08-19 | Claude (Claude Code) | Resolved the MQF modelling problem: `mqfLevel` nullable + `MqfStatus` enum + CHECK constraint, migration `mqf_status`. Four wrong rows corrected, six TVET rows flagged `UNKNOWN`. Pure mirror in `src/lib/rules/mqf-level.ts`, 15 tests passing. Week 0 done. |
 | 2026-08-19 | Claude (Claude Code) | GitHub repo created (private, `adamafzainizam`), PR #1 merged. First real institution entered: UTHM credit transfer guidelines, 2 tiered rules, 9 caveats. Pure answer builder + 25 tests; the hard ceiling is now a type constraint, not a convention. **Success test passed.** Found a third schema gap: `sourceDocumentDate` cannot say how it knows the date. |
+| 2026-08-19 | Claude (Claude Code) | Added UM and MMU. Found the diploma→bachelor caps are a national MOHE/MQA baseline, not a per-institution variable — the original thesis. **Thesis narrowed to the decoder** (terminology, process traps, publication gaps); coverage target cut from 15–20 institutions to 5–8; data entry paused; moat claim corrected. §1, README, scope.md and seo.md all restated. |
 
 <!-- BEGIN:nextjs-agent-rules -->
 
