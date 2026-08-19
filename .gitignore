@@ -49,3 +49,12 @@ prisma/*.db-journal
 
 # scratch — for data-entry working files that shouldn't be committed
 scratch/
+
+# certificates
+*.pem
+
+# package manager debug logs
+.pnpm-debug.log*
+
+# prisma — generated client, rebuilt by `prisma generate` on every build
+src/generated/
