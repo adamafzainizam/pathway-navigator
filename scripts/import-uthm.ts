@@ -11,13 +11,11 @@
  *   Published by the Centre for Academic Development and Training & the Office
  *   of Academic Management, UTHM.
  *
- * PROVENANCE CAVEAT — READ BEFORE COPYING THIS PATTERN.
+ * PROVENANCE
  *   The document carries NO printed date anywhere in its text. The only date
- *   available is PDF file metadata (CreationDate 2022-06-02). That is a weaker
- *   claim than "the date printed on the institution's own document", which is
- *   what sourceDocumentDate is defined as. It is used here because the column
- *   is NOT NULL and there is no alternative. See docs/decision-log.md —
- *   this is an OPEN issue, not a settled convention.
+ *   available is PDF file metadata (CreationDate 2022-06-02), so the rules
+ *   below record sourceDateBasis = FILE_METADATA. Always run `pdfinfo` and
+ *   record which kind of date you got — a bare date cannot say how it is known.
  *
  * Run:  npx tsx scripts/import-uthm.ts
  * Idempotent — upserts on natural keys, safe to re-run.
@@ -30,6 +28,12 @@ const SOURCE_URL =
 
 /** PDF metadata CreationDate. NOT a date printed in the document. */
 const SOURCE_DOCUMENT_DATE = new Date("2022-06-02T00:00:00Z");
+
+/**
+ * Says so explicitly, rather than leaving the date looking authoritative.
+ * `pdfinfo` reported CreationDate 2022-06-02; the document text has no date.
+ */
+const SOURCE_DATE_BASIS = "FILE_METADATA" as const;
 
 /** Today. A human (with an AI agent) read the document on this date. */
 const VERIFIED_ON = new Date("2026-08-19T00:00:00Z");
@@ -53,6 +57,7 @@ async function main() {
       mqrProviderRef: null,
       policySourceUrl: SOURCE_URL,
       policyDocumentDate: SOURCE_DOCUMENT_DATE,
+      policyDateBasis: SOURCE_DATE_BASIS,
     },
   });
 
@@ -95,6 +100,7 @@ async function main() {
   const provenance = {
     sourceUrl: SOURCE_URL,
     sourceDocumentDate: SOURCE_DOCUMENT_DATE,
+    sourceDateBasis: SOURCE_DATE_BASIS,
     verifiedOn: VERIFIED_ON,
     recheckDueOn: RECHECK_DUE_ON,
     effectiveFrom: SOURCE_DOCUMENT_DATE,

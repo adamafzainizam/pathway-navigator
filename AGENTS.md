@@ -33,7 +33,15 @@ A tool answering the *mechanical* questions about Malaysian education pathways: 
 These are not negotiable without an explicit decision recorded in `docs/decision-log.md`.
 
 1. **No spending.** Free tiers only. Ask before introducing anything billable. (Carried over from `campus-marketplace`, where this constraint held for the entire project.)
-2. **Provenance on every claim.** Every rule row carries a source URL, the source document's own date, and a human verification date. Enforced `NOT NULL` at the database level, from the first migration.
+2. **Provenance on every claim.** Every rule row carries a source URL, a human
+   verification date, and a statement of how the source document's date is
+   known. `sourceUrl`, `verifiedOn` and `sourceDateBasis` are `NOT NULL`.
+   *Amended 2026-08-19:* `sourceDocumentDate` itself is now nullable, because
+   real institutional documents are frequently undated and forcing a date
+   produced a column that could not say how strong it was. The obligation did
+   not weaken — a row must still state its provenance, it simply may now state
+   "this document carries no date" instead of inventing one. Reasoning in
+   `docs/decision-log.md`.
 3. **Never overstate certainty.** Per-course transfer decisions are made by faculties case-by-case and are unpublished. The tool states where certainty ends. See section 5.
 4. **Bilingual from day one.** BM and EN, route-level i18n. Not a later port.
 5. **Git workflow:** one feature = one branch, atomic commits, PR per feature, tagged releases. Branch *before* writing code, not after.
@@ -84,23 +92,11 @@ Nothing in the database now claims an MQF level it cannot support.
 
 ## 4. Next up
 
-**Decide first — third schema gap found by contact with real data.**
-
-1. **How should provenance record *how* it knows a document's date?**
-   `sourceDocumentDate` is `NOT NULL` and defined as "the date printed on the
-   institution's own document". The UTHM guidelines have no printed date at all;
-   PDF file metadata was used instead, which is a materially weaker claim. Same
-   shape of problem as `MqfStatus`. Likely fix is a `sourceDateBasis` enum
-   (`PRINTED_ON_DOCUMENT` / `FILE_METADATA` / `PAGE_PUBLISHED` / `UNDATED`).
-   Recorded OPEN in `docs/decision-log.md` (2026-08-19).
-
-**Then continue Week 1–2:**
-
-2. **Enter 2–4 more institutions**, ideally ones whose policies are shaped
+1. **Enter 2–4 more institutions**, ideally ones whose policies are shaped
    differently from UTHM's — an absolute credit cap rather than a percentage, and
    a private university, to find the next place the model bends. Use
    `scripts/import-uthm.ts` as the pattern.
-3. **Build the admin entry form.** Deferred until now on purpose, and the delay
+2. **Build the admin entry form.** Deferred until now on purpose, and the delay
    paid: the `requirements` shape it would have been built around was wrong.
    Use the pure validators in `src/lib/rules/` — never let Postgres be the error
    surface.

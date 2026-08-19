@@ -81,6 +81,24 @@ enum AccreditationStatus {
 /// Collapsing those two into a plausible-looking integer is how a reference
 /// site starts asserting things its own sources refuse to assert. Same
 /// discipline as AccreditationStatus — see AGENTS.md §7.
+/// How we know the date attached to a source document.
+///
+/// Added after entering the first real institution. UTHM's credit transfer
+/// guidelines carry no printed date across eleven pages — the only date
+/// available was PDF file metadata, which says when the file was exported, not
+/// when the policy took effect. Storing that in the same column as a date
+/// printed on a document makes the two indistinguishable.
+///
+/// PRINTED_ON_DOCUMENT is the only basis strong enough to reason about
+/// supersession ("this policy replaced that one"). The others are weaker
+/// evidence and the UI must not present them as the policy's own date.
+enum SourceDateBasis {
+  PRINTED_ON_DOCUMENT
+  FILE_METADATA
+  PAGE_PUBLISHED
+  UNDATED
+}
+
 enum MqfStatus {
   ASSIGNED
   NOT_IN_FRAMEWORK
@@ -159,6 +177,9 @@ model Institution {
   /// live on ProgressionRule; this is the umbrella document.
   policySourceUrl      String?
   policyDocumentDate   DateTime?
+  /// NULL only when there is no policy document at all. Same discipline as
+  /// ProgressionRule.sourceDateBasis.
+  policyDateBasis      SourceDateBasis?
 
   programmes Programme[]
 
@@ -251,8 +272,15 @@ model ProgressionRule {
   // --- Provenance. All NOT NULL, deliberately. See AGENTS.md §2. ---
   /// Where this rule was read from.
   sourceUrl String
-  /// The date printed on the institution's own document.
-  sourceDocumentDate DateTime
+  /// The date on the institution's own document — NULL when the document
+  /// carries no date at all and none could be recovered. Always read together
+  /// with `sourceDateBasis`; a date alone does not say how strong it is.
+  sourceDocumentDate DateTime?
+
+  /// How `sourceDocumentDate` was obtained. UNDATED requires the date to be
+  /// NULL; every other basis requires it to be present. Enforced by the
+  /// `ProgressionRule_source_date_matches_basis` CHECK constraint.
+  sourceDateBasis SourceDateBasis
   /// When a human last confirmed this is still current.
   verifiedOn DateTime
   /// Drives the admin re-verification queue.
