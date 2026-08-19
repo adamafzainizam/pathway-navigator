@@ -255,3 +255,73 @@ application for each course applied for" — is stored as a severity-3 caveat,
 which is the exact sentence AGENTS.md section 5 was written around, now
 confirmed verbatim in a real institutional document rather than assumed.
 
+### 2026-08-19 — two more institutions, and a finding that challenges the thesis
+
+Added Universiti Malaya (public) and Multimedia University (private) alongside
+UTHM. Three institutions, three programmes, six rules, 23 caveats.
+
+**The caps are nearly identical across all three, and that was not expected.**
+
+| Institution | Diploma → Bachelor cap | Tiers |
+|---|---|---|
+| UTHM | 30%, or up to 50% if the target is MQA-accredited | 1–30% grade C+, 31–50% grade B |
+| UM | 50% | 1–30% grade C, 31–50% grade B |
+| MMU | 50% | 1–30% grade C, 31–50% grade B |
+
+UM and MMU are structurally identical. UTHM differs only in requiring C+ rather
+than C, and in gating the higher tier on accreditation.
+
+This is not coincidence, and the documents say so. MMU's policy states on page 1
+that it exists "to be in line with the Ministry of Higher Education (MOHE)'s
+policy" and records four Senate amendments made for that reason. UTHM cites
+*Kompilasi Dasar Jaminan Kualiti Pendidikan Tinggi, MQA*. UM cites the same
+family of MQA and MOHE sources. **The tiered 30/50 structure is a national
+baseline that institutions restate, not a per-institution variable.**
+
+**Consequence for the product thesis.** `AGENTS.md` §1 says the gap is "the
+mechanics layer — accreditation status, MQF levels, per-institution transfer
+caps". On this evidence *per-institution transfer caps are largely uniform*, so
+a dataset whose main axis is "look up this university's cap" is worth much less
+than assumed: three institutions took a day's work to establish a number that a
+single sentence could convey.
+
+What genuinely does vary, and is worth collecting, is narrower and stranger:
+
+1. **Terminology is contradictory between institutions.** UM: course exemption
+   "will not result in a student obtaining credit... shall be replaced with
+   another course". UTHM's glossary: "Credit Exemption — Credit Transfer Without
+   Grade", where credit *does* count toward graduation. The same phrase means
+   opposite things at two public universities, and a student who learns the word
+   at one will be wrong at the other. No guide anywhere explains this.
+2. **Process detail.** UTHM requires application in the first semester only and
+   refuses later ones outright; a faculty may raise the minimum grade with Senate
+   permission; prerequisites do not transfer automatically at UM.
+3. **What is not published at all.** UTHM and MMU do not publish graduating
+   credit totals, so their percentage caps cannot be turned into credit figures.
+   UM does (128), so its caps resolve to 38 and 64.
+4. **The existence of the national baseline itself**, which no student-facing
+   Malaysian guide states.
+
+**Not acted on yet.** This does not obviously kill the project, but it does move
+the centre of gravity from "per-institution caps" to "terminology, process and
+provenance", and that is a different product with a different amount of work per
+row. Recorded here for a deliberate decision rather than drifting into the
+answer.
+
+**Smaller findings from the same pass.**
+
+- `Institution.state` assumes one location. MMU operates in Cyberjaya (Selangor)
+  and Melaka, so `state` is left null rather than asserting one campus.
+- `Programme.nameMs` is `NOT NULL`, but neither UM nor MMU publishes a Malay
+  programme name. The English string stands in, which is visibly wrong to a
+  Malay reader. Translating an official award title would be fabrication, so it
+  was not done. The bilingual-from-day-one constraint has a data-availability
+  cost that had not been anticipated.
+- UM's document states a version *year* ("LATEST VERSION 2022") with no day or
+  month. `sourceDateBasis` records PRINTED_ON_DOCUMENT honestly, but the stored
+  date pads the day and month, so a caveat says so. Date *granularity* is a
+  third axis the basis enum does not capture.
+- MMU's policy PDF carries the metadata title "MEDICAL CERTIFICATION/REPORT
+  SUBMISSION" because it was made from a reused template. Any pipeline that
+  trusts PDF metadata to identify documents will mis-file it.
+

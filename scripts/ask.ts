@@ -15,9 +15,12 @@ import { describeSourceDate } from "../src/lib/rules/source-date";
 
 const ASKED_ON = new Date();
 
+/** Institution slug, e.g. `npx tsx scripts/ask.ts um`. Defaults to UTHM. */
+const INSTITUTION = process.argv[2] ?? "uthm";
+
 async function main() {
   const programme = await prisma.programme.findFirstOrThrow({
-    where: { slug: "bcs-software-engineering", institution: { slug: "uthm" } },
+    where: { slug: "bcs-software-engineering", institution: { slug: INSTITUTION } },
     include: { institution: true },
   });
   const diploma = await prisma.qualification.findUniqueOrThrow({
@@ -71,8 +74,14 @@ async function main() {
     console.log(`     type:        ${tier.transferType}`);
     console.log(`     cap:         ${cap}`);
     console.log(`     min grade:   ${tier.requirements.minCourseGrade}`);
-    console.log(`     syllabus:    ${tier.requirements.minSyllabusSimilarityPercent}% similarity required`);
-    console.log(`     apply:       ${tier.requirements.applicationWindow}`);
+    const overlap =
+      tier.requirements.minSyllabusSimilarityPercent ??
+      tier.requirements.minSyllabusOverlapPercent;
+    if (overlap) console.log(`     syllabus:    ${overlap}% overlap required`);
+    if (tier.requirements.applicationWindow)
+      console.log(`     apply:       ${tier.requirements.applicationWindow}`);
+    if (tier.requirements.countsTowardGpa === false)
+      console.log(`     GPA:         does NOT count toward GPA/CGPA`);
     console.log("");
   }
 

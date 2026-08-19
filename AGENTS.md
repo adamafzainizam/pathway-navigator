@@ -79,7 +79,7 @@ with sources and caveats attached.
 - [x] Second CHECK constraint tying level to status, verified live across all six combinations
 - [x] 15 unit tests passing across two pure rule modules
 
-- [x] First real institution entered: UTHM, 1 programme, 2 rules, 9 caveats
+- [x] Three real institutions entered: UTHM, UM, MMU — 3 programmes, 6 rules, 23 caveats
 - [x] **Success test passed** — a real progression question answered from the database with sources attached (`npx tsx scripts/ask.ts`)
 - [x] Hard ceiling enforced in code: the answer type cannot express "you will receive N credits"
 
@@ -92,10 +92,15 @@ Nothing in the database now claims an MQF level it cannot support.
 
 ## 4. Next up
 
-1. **Enter 2–4 more institutions**, ideally ones whose policies are shaped
-   differently from UTHM's — an absolute credit cap rather than a percentage, and
-   a private university, to find the next place the model bends. Use
-   `scripts/import-uthm.ts` as the pattern.
+1. **Decide what this dataset is actually for.** Entering UM and MMU showed the
+   diploma→bachelor caps are a *national* MOHE/MQA baseline restated by each
+   institution, not a per-institution variable — UM and MMU are identical, UTHM
+   differs by one grade step. §1 names "per-institution transfer caps" as a core
+   part of the gap; on this evidence that part is thin. What does vary is
+   terminology (institutions define "exemption" in contradictory ways), process
+   detail, and what each institution declines to publish. Full evidence in
+   `docs/decision-log.md` (2026-08-19). This is a product question, not a
+   technical one, and it should be settled before more data entry.
 2. **Build the admin entry form.** Deferred until now on purpose, and the delay
    paid: the `requirements` shape it would have been built around was wrong.
    Use the pure validators in `src/lib/rules/` — never let Postgres be the error
