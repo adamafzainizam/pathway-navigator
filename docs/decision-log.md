@@ -96,3 +96,63 @@ surprise. Revisit when `@prisma/config` bumps its dependency.
 `npm approve-scripts --all` would have been one command. Pinning four named
 packages at exact versions means a future version bump fails loudly and gets
 looked at, which is the point of npm 11 gating them in the first place.
+
+### 2026-08-19 — MQF levels in the seed verified against the source document
+
+**Verified against:** *Malaysian Qualifications Framework (MQF) Second Edition*,
+MQA, first published 2007, second edition 2017, this printing © 2024.
+Retrieved 2026-08-19. Text checked directly, not summarised from secondary
+sources. Verification date for the rows below: **2026-08-19**.
+
+**Confirmed correct.** Diploma = Level 4, Advanced Diploma = Level 5,
+Bachelor's Degree = Level 6, Certificate = Levels 1–3. Appendix 3 gives the
+graduating-credit table that matches. The `diploma`, `advanced-diploma` and
+`bachelor` seed rows are right.
+
+**Contradicted — four seed rows assert a level the framework explicitly
+declines to assign.** MQF paragraph 74, quoted in full:
+
+> "Foundation and university preparatory programmes, Sijil Tinggi Persekolahan
+> Malaysia, Matriculation and foreign qualifications like A Levels are entry
+> qualifications to tertiary education/bachelor's programmes at universities.
+> **However, they are not included in the Framework.** Nonetheless, the MQF
+> determines the standards for these qualifications to ensure comparability and
+> standardisation of student abilities."
+
+That covers `stpm`, `matrikulasi` and `asasi`, all seeded at MQF 3. `spm` is
+seeded at MQF 2 and is not mentioned in the document at all — the string
+"Pelajaran" does not occur in it. SPM is a school-leaving certificate below the
+framework's floor.
+
+So four of thirteen rows currently state something MQA specifically refuses to
+state. That is the exact failure mode section 7 of AGENTS.md is about: it is not
+a gap, it is an assertion, and it is wrong.
+
+**Not verifiable from this document — needs a different source.** The MQF names
+no Malaysian TVET qualification anywhere: "Kemahiran" and "Vokasional" each
+occur zero times. Appendix 3's TVET column carries bare level numbers only. So
+`skm-1`, `skm-2`, `skm-3`, `dkm`, `dlkm` and `kv` are *unverified*, not
+*verified-correct* — their mapping comes from JPK (Jabatan Pembangunan
+Kemahiran), which has to be cited on its own terms. `kv` at Level 4 is the most
+doubtful: Sijil Vokasional Malaysia and Diploma Vokasional Malaysia are distinct
+awards and the seed row collapses them into one.
+
+**Consequence for the schema, and it is not a data-entry problem.**
+`Qualification.mqfLevel` is `Int` and `NOT NULL`, so the model cannot represent
+"this qualification is real, widely used, and deliberately outside the MQF."
+Every row is forced to claim a level. The three states that need distinguishing
+are the same three the `accreditationStatus` enum already distinguishes for
+accreditation:
+
+  - a level the framework assigns;
+  - explicitly outside the framework (STPM, Matriculation, Asasi, SPM) — checked,
+    and the answer is "MQA does not assign one";
+  - nobody has checked yet.
+
+Collapsing the second into a plausible-looking integer is how a reference site
+starts lying, and it would be load-bearing: MQF level is described in AGENTS.md
+section 1 as the spine every progression rule resolves against.
+
+**Status: OPEN.** No schema change made and no seed row edited — this needs a
+decision, recorded here before it is acted on. The seeded data currently in the
+development branch still contains the four wrong levels.

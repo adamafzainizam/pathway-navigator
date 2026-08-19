@@ -43,7 +43,8 @@ These are not negotiable without an explicit decision recorded in `docs/decision
 
 ## 3. Current status
 
-**Phase:** Week 0 — scaffold verified and running locally. No database yet.
+**Phase:** Week 0 — database live, schema migrated, backbone seeded.
+Blocked on one data-modelling decision (see section 4).
 
 **Done:**
 - [x] Repository structure and documentation
@@ -55,39 +56,52 @@ These are not negotiable without an explicit decision recorded in `docs/decision
 - [x] Generated client confirmed to contain all five models
 - [x] `npm run build`, `npm run typecheck`, `npm run lint` all pass; dev server serves `/` with HTTP 200
 
-**Not started:** the database itself, and everything downstream of it.
+- [x] Neon project created — Singapore (`ap-southeast-1`), Postgres 18.6, free tier
+- [x] `development` and `preview` branches both created (Preview not left sharing a database — see section 6)
+- [x] First migration applied; all five tables present
+- [x] `ProgressionRule_exactly_one_source` CHECK constraint added by hand and **verified against the live database**
+- [x] Mirrored as a pure function in `src/lib/rules/progression-source.ts`, 7 unit tests passing
+- [x] Backbone seeded: 13 qualifications
+- [x] MQF levels in the seed verified against the MQF 2nd Edition document
 
-**Still true: no database exists.** The schema validates, but it has never been
-migrated — `DATABASE_URL` currently points at a placeholder that is never
-connected to. Nothing has round-tripped through Postgres. Section 4 picks up
-exactly there.
+**Not started:** institutions, programmes, progression rules, admin UI.
+
+**One thing is knowingly wrong in the database right now.** The MQF verification
+found that four of the thirteen seeded qualifications (`spm`, `stpm`,
+`matrikulasi`, `asasi`) assert an MQF level that MQA explicitly declines to
+assign — the framework says outright that STPM, Matriculation and foundation
+programmes "are not included in the Framework". The rows are still in the
+development branch as seeded. Fixing them needs a schema decision, not a data
+edit, because `mqfLevel` is `Int NOT NULL` and cannot represent "deliberately
+outside the framework". Full findings and quotes: `docs/decision-log.md`,
+entry dated 2026-08-19.
 
 ---
 
 ## 4. Next up
 
-**Immediate (next working session) — steps 0 and 1 are done; this is where it stopped:**
+**Decide first — everything else builds on it.**
 
-1. **Create the Neon project and its `development` branch.** Free tier, Singapore
-   region (`ap-southeast-1`) — closest to the audience. Copy the **pooled**
-   connection string into `.env` as `DATABASE_URL`, replacing the placeholder
-   that is there now. Give **Preview** its own Neon branch at the same time
-   rather than later; see section 6 on why sharing one is a trap.
-2. **First migration:** `npm run db:migrate -- --name init`. This is the first
-   time any of this touches a real database, so expect to fix things.
-3. **Add the CHECK constraint Prisma cannot express.** `ProgressionRule` requires
-   exactly one of `fromQualificationId` / `fromProgrammeId` to be set. Write it
-   by hand into the generated migration SQL *before* applying, or as a follow-up
-   migration. Mirror it as a validation function in `src/lib/`.
-4. **Seed the backbone:** `npm run seed`. Note the file's own warning — the MQF
-   levels in it were drafted from research notes, not read off the current MQF
-   document. Verify them against MQA's published framework and record the
-   verification date in `docs/decision-log.md` before building rules on top.
+1. **How should `Qualification` represent "no MQF level"?** `mqfLevel` is
+   currently `Int NOT NULL`, so SPM, STPM, Matriculation and Asasi are all
+   forced to claim a level the framework refuses to give them. Needs the same
+   three-state treatment `accreditationStatus` already gets: assigned /
+   checked-and-outside-the-framework / nobody-has-looked. Options and the
+   reasoning are in `docs/decision-log.md` (2026-08-19, status OPEN). Once
+   decided: migration, re-seed, and re-verify.
+2. **Source the TVET rows properly.** `skm-1/2/3`, `dkm`, `dlkm` and `kv` are
+   unverified — the MQF document names no TVET qualification at all. They need
+   a JPK (Jabatan Pembangunan Kemahiran) citation on their own terms. `kv` is
+   the worst of them: it collapses Sijil Vokasional Malaysia and Diploma
+   Vokasional Malaysia, which are different awards at different levels.
 
-**Weeks 1–2 target:** admin entry form + 3–5 institutions' rules entered end to end.
-**Success test:** one real progression question answered correctly from the database, with sources attached.
+**Then Weeks 1–2 as planned:** admin entry form + 3–5 institutions' rules
+entered end to end.
+**Success test:** one real progression question answered correctly from the
+database, with sources attached.
 
-**Explicitly deferred:** public UI, SEO pages, the interactive checker, study-abroad data. Do not start these before the data layer is proven.
+**Explicitly deferred:** public UI, SEO pages, the interactive checker,
+study-abroad data. Do not start these before the data layer is proven.
 
 The root layout and `src/app/page.tsx` are deliberately a placeholder, and
 `lang` is hardcoded to `en`. When route-level i18n lands, the layout becomes a
@@ -151,6 +165,33 @@ Each of these was hit and verified on 2026-08-19, not inherited.
   untrusted input. `npm audit fix --force` "fixes" it by downgrading to
   **Prisma 6.12 — a major version back**. Don't. Re-check when Prisma ships a
   bumped `@prisma/config`.
+
+- **Testing a CHECK constraint with several cases in one transaction gives
+  false results.** In Postgres, one failed statement aborts the entire
+  transaction; every later statement then fails with a *different* error
+  regardless of merit. *Symptom:* the first bad case is correctly rejected, then
+  a case you know is valid is also "rejected" — reading as though the constraint
+  is far too strict. Give each case its own transaction and roll it back.
+
+- **`node --test` and `tsc` disagree about import extensions.** Node's native
+  type stripping requires `./thing.ts` on relative imports inside test files;
+  `tsc` rejects that with `TS5097` unless `allowImportingTsExtensions` is set.
+  It is set in `tsconfig.json`, which is only valid because `noEmit` is true.
+
+- **`prisma.$queryRaw` cannot deserialise Postgres's `name` type.** `SELECT
+  current_user` or `current_database()` fails with "Failed to deserialize column
+  of type 'name'", which reads like a connection problem but is not — the
+  connection is fine. Cast in the query: `current_user::text`.
+
+- **tsx runs `.ts` files as CommonJS** unless `package.json` sets
+  `"type": "module"`, so top-level `await` in a standalone script fails with an
+  esbuild `TransformError`, not a Node error. Wrap script bodies in an
+  `async main()` the way `prisma/seed.ts` does.
+
+- **Neon's pooled connection is fine for `prisma migrate dev`.** Worth recording
+  because the opposite is widely assumed: PgBouncer in transaction mode cannot
+  run `CREATE DATABASE`, so shadow-database creation was expected to fail. It
+  did not — no separate direct/unpooled URL was needed.
 
 ### Inherited from `campus-marketplace`
 
@@ -223,6 +264,7 @@ Append a short entry per working session. Newest at the bottom.
 |---|---|---|
 | (scaffold) | Claude (chat) | Repository created: docs, schema draft, no code run |
 | 2026-08-19 | Claude (Claude Code) | `git init`. Next 16.3.1 scaffold merged. Deps installed. Prisma 7 wired up (`prisma.config.ts`, `prisma-client` generator, Neon driver adapter in `src/lib/db.ts`). `prisma validate` passes, build/typecheck/lint pass, dev server serves `/`. **Stopped at: Neon project not created, no migration run.** |
+| 2026-08-19 | Claude (Claude Code) | Neon project created (Singapore, PG 18.6), `development` + `preview` branches. First migration applied with hand-written CHECK constraint, verified live. Pure mirror + 7 tests in `src/lib/rules/`. Seeded 13 qualifications. **MQF levels verified against the MQF 2nd Edition — four seed rows are wrong and need a schema decision before they can be fixed.** |
 
 <!-- BEGIN:nextjs-agent-rules -->
 
