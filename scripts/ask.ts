@@ -11,6 +11,7 @@ import {
   isCurrent,
   type RuleView,
 } from "../src/lib/rules/progression-answer";
+import { describeSourceDate } from "../src/lib/rules/source-date";
 
 const ASKED_ON = new Date();
 
@@ -81,10 +82,18 @@ async function main() {
   }
 
   const src = answer.tiers[0].source;
+  const first = rows[0];
   console.log("\n   Source:");
   console.log(`     ${src.url}`);
-  console.log(`     document date ${src.documentDate.toISOString().slice(0, 10)}` +
-    `, last verified ${src.verifiedOn.toISOString().slice(0, 10)}`);
+  const dateText =
+    src.documentDate === null
+      ? "no document date"
+      : `document date ${src.documentDate.toISOString().slice(0, 10)}`;
+  console.log(`     ${dateText} (${describeSourceDate({
+    sourceDocumentDate: first.sourceDocumentDate,
+    sourceDateBasis: first.sourceDateBasis,
+  })})`);
+  console.log(`     last verified ${src.verifiedOn.toISOString().slice(0, 10)}`);
 }
 
 main()

@@ -34,7 +34,8 @@ export type RuleView = {
   targetTotalCredits: number | null;
   requirements: Record<string, unknown>;
   sourceUrl: string;
-  sourceDocumentDate: Date;
+  /** Null when the source document carries no date at all. */
+  sourceDocumentDate: Date | null;
   verifiedOn: Date;
   caveats: CaveatView[];
 };
@@ -52,7 +53,7 @@ export type AnswerTier = {
   transferType: TransferType;
   cap: Cap;
   requirements: Record<string, unknown>;
-  source: { url: string; documentDate: Date; verifiedOn: Date };
+  source: { url: string; documentDate: Date | null; verifiedOn: Date };
   /** Highest severity first, so the UI cannot bury the important one. */
   caveats: CaveatView[];
 };

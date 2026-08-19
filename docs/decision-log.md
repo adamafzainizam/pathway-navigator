@@ -211,11 +211,29 @@ effect, and a re-export would change it. The column is `NOT NULL`, so the
 metadata date was used and a visible caveat attached saying exactly that.
 
 This is the same class of problem as the MQF levels: a provenance field that
-cannot say how it knows what it knows. **Status: OPEN.** The likely fix is a
-`sourceDateBasis` enum (`PRINTED_ON_DOCUMENT` / `FILE_METADATA` /
-`PAGE_PUBLISHED` / `UNDATED`), matching `MqfStatus` and `AccreditationStatus`.
-Not done unilaterally — it is the third schema change in a day and wants a
-deliberate decision.
+cannot say how it knows what it knows. **Status: RESOLVED, same day.** A `SourceDateBasis` enum
+(`PRINTED_ON_DOCUMENT` / `FILE_METADATA` / `PAGE_PUBLISHED` / `UNDATED`) now
+sits alongside the date on both `ProgressionRule` and `Institution`, matching
+`MqfStatus` and `AccreditationStatus`.
+
+`sourceDocumentDate` became nullable, which amends standing constraint 2 in
+`AGENTS.md` — recorded there as required. This looks like a weakening and is
+not: the old column was `NOT NULL` but could not say whether its value was
+printed on the document or scraped off file metadata, so it compelled a value
+without compelling its meaning. The obligation now falls on `sourceDateBasis`,
+which *is* `NOT NULL`, and a CHECK constraint keeps the two honest — `UNDATED`
+requires no date, any other basis requires one. Verified live across all five
+combinations.
+
+Rejected: keeping the date `NOT NULL` and treating an undated document as
+unenterable. That would have made the dataset's coverage depend on institutions'
+document hygiene rather than on what is actually knowable, and undated PDFs are
+common enough that it would have excluded real policies outright.
+
+`isPolicyDateAuthoritative()` returns true only for `PRINTED_ON_DOCUMENT`, so
+weaker bases can still drive staleness triage without ever being presented as
+the policy's own date. `describeSourceDate()` guarantees a date is never
+rendered bare.
 
 **4. What worked.** The nullable columns earned their keep immediately.
 UTHM does not publish this programme's graduating credit total, so
