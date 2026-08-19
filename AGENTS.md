@@ -43,33 +43,55 @@ These are not negotiable without an explicit decision recorded in `docs/decision
 
 ## 3. Current status
 
-**Phase:** Week 0 — repository scaffolded, nothing built.
+**Phase:** Week 0 — scaffold verified and running locally. No database yet.
 
 **Done:**
 - [x] Repository structure and documentation
-- [x] Prisma schema drafted (`prisma/schema.prisma`) — **not yet migrated or validated against a real database**
 - [x] Research completed on data sources, saturation, SEO, monetization (see `docs/`)
+- [x] Git repository initialised; scaffold committed as a restore point
+- [x] Next.js 16.3.1 scaffold merged in (TypeScript, Tailwind 4, App Router, `src/`, `@/*` alias)
+- [x] Dependencies installed and pinned in `package-lock.json`
+- [x] Prisma 7.9.1 wired up: `prisma.config.ts` added, schema fixed, **`prisma validate` passes**
+- [x] Generated client confirmed to contain all five models
+- [x] `npm run build`, `npm run typecheck`, `npm run lint` all pass; dev server serves `/` with HTTP 200
 
-**Not started:** everything else.
+**Not started:** the database itself, and everything downstream of it.
 
-**Nothing in this repo has been run.** The schema has never been through `prisma validate`, no dependencies are installed, no database exists. First session must verify the scaffold actually works before building on it.
+**Still true: no database exists.** The schema validates, but it has never been
+migrated — `DATABASE_URL` currently points at a placeholder that is never
+connected to. Nothing has round-tripped through Postgres. Section 4 picks up
+exactly there.
 
 ---
 
 ## 4. Next up
 
-**Immediate (first working session):**
+**Immediate (next working session) — steps 0 and 1 are done; this is where it stopped:**
 
-0. **`package.json` has no dependencies listed on purpose.** It was written without network access, so pinning versions would mean inventing them. Scaffold properly instead — run `npx create-next-app@latest` in a temp directory with TypeScript + Tailwind + App Router + `src/` + `@/*` alias, then merge its `package.json`, `tsconfig.json`, `next.config`, and `eslint` config into this repo. Add `prisma`, `@prisma/client`, `tsx`, and `dotenv` after. Keep the `scripts` block already defined here.
-1. `npm install`, then `npx prisma validate` — the schema in this repo was written without network access and has never been checked by the Prisma CLI. Expect to fix things. Note Prisma 7 wants the connection string in `prisma.config.ts`, not the `datasource` block; the schema currently uses the older `env("DATABASE_URL")` form and will likely need adjusting.
-2. Create the Neon project and `development` branch. Set `DATABASE_URL`.
-3. First migration. Confirm the generated client includes all models.
-4. Seed the qualification/MQF backbone (`prisma/seed.ts`).
+1. **Create the Neon project and its `development` branch.** Free tier, Singapore
+   region (`ap-southeast-1`) — closest to the audience. Copy the **pooled**
+   connection string into `.env` as `DATABASE_URL`, replacing the placeholder
+   that is there now. Give **Preview** its own Neon branch at the same time
+   rather than later; see section 6 on why sharing one is a trap.
+2. **First migration:** `npm run db:migrate -- --name init`. This is the first
+   time any of this touches a real database, so expect to fix things.
+3. **Add the CHECK constraint Prisma cannot express.** `ProgressionRule` requires
+   exactly one of `fromQualificationId` / `fromProgrammeId` to be set. Write it
+   by hand into the generated migration SQL *before* applying, or as a follow-up
+   migration. Mirror it as a validation function in `src/lib/`.
+4. **Seed the backbone:** `npm run seed`. Note the file's own warning — the MQF
+   levels in it were drafted from research notes, not read off the current MQF
+   document. Verify them against MQA's published framework and record the
+   verification date in `docs/decision-log.md` before building rules on top.
 
 **Weeks 1–2 target:** admin entry form + 3–5 institutions' rules entered end to end.
 **Success test:** one real progression question answered correctly from the database, with sources attached.
 
 **Explicitly deferred:** public UI, SEO pages, the interactive checker, study-abroad data. Do not start these before the data layer is proven.
+
+The root layout and `src/app/page.tsx` are deliberately a placeholder, and
+`lang` is hardcoded to `en`. When route-level i18n lands, the layout becomes a
+`[locale]` layout and `lang` comes from the route param.
 
 ---
 
@@ -89,9 +111,54 @@ Being explicit about where certainty ends is the differentiator, not a weakness.
 
 ## 6. Gotchas
 
-Empty for now — this project has not been run. **But the following are inherited from `campus-marketplace` and almost certainly still apply**, since the stack is deliberately the same:
+### Confirmed in this repository
 
-- **Prisma 7** keeps the connection string in `prisma.config.ts`, not `schema.prisma`. `PrismaClient` needs an explicit driver adapter. Standalone scripts need `import "dotenv/config"` or `DATABASE_URL` silently falls back to `localhost:5432`.
+Each of these was hit and verified on 2026-08-19, not inherited.
+
+- **`npm install` exits 0 while silently skipping install scripts.** npm 11 gates
+  them behind an allowlist. Four packages here need theirs: `prisma`,
+  `@prisma/engines`, `esbuild` (which `tsx` runs on) and `unrs-resolver` (which
+  ESLint's import resolver runs on). The only sign is a `npm warn allow-scripts`
+  block in output you have probably already scrolled past — the exit code is 0
+  and `node_modules/` looks complete. *Symptom:* a tool that should work fails
+  bizarrely right after a "successful" install. *Fix:*
+  `npm approve-scripts <pkg> ...`, then re-run `npm install`. Approvals are
+  written into the `allowScripts` block of `package.json` **pinned to exact
+  versions**, so bumping any of those four packages needs re-approval — and will
+  present as this same silent breakage.
+
+- **Prisma 7 rejects `url` inside the `datasource` block outright** — it is not a
+  warning. `P1012: The datasource property 'url' is no longer supported in
+  schema files.` The URL belongs in `prisma.config.ts`; the schema block declares
+  only `provider`.
+
+- **The Prisma 7 CLI does not load `.env` at all.** `prisma.config.ts` must
+  `import "dotenv/config"` itself. Without it: `PrismaConfigEnvError: Cannot
+  resolve environment variable: DATABASE_URL`. *The error names the project
+  directory, not the config file*, which makes it read like a much bigger
+  problem than a missing import.
+
+- **`tsc --noEmit` fails on a clean checkout until something has built once.**
+  Next 16 generates `LayoutProps` / `PageProps` into `.next/types`, which
+  `tsconfig.json` includes. *Symptom:* `error TS2304: Cannot find name
+  'LayoutProps'` in `src/app/layout.tsx`. Not a real type error — run
+  `npm run build` (or `npm run dev`) once. Worth remembering when CI runs
+  typecheck before build.
+
+- **`npm audit` reports 3 high-severity advisories that should be left alone.**
+  All three are `deepmerge-ts` (stack exhaustion on recursive object graphs)
+  reached via `@prisma/config`. It parses our own config file at CLI time, not
+  untrusted input. `npm audit fix --force` "fixes" it by downgrading to
+  **Prisma 6.12 — a major version back**. Don't. Re-check when Prisma ships a
+  bumped `@prisma/config`.
+
+### Inherited from `campus-marketplace`
+
+Not yet re-confirmed here, but the stack is deliberately the same, so assume they apply:
+
+- Standalone scripts need `import "dotenv/config"` or `DATABASE_URL` is simply
+  unset. `src/lib/db.ts` now throws loudly in that case rather than defaulting,
+  because the old failure mode was a silent fallback to `localhost:5432`.
 - A migration can apply without the generated client picking up new models. Verify the client after migrating. A stale dev server (started before the migration) is diagnosable from its error still listing old fields.
 - **Any standalone script "against production" silently targets development** unless `DATABASE_URL` is overridden inline on the command line — `dotenv` loads `.env` and does not overwrite an already-set variable.
 - **A migration applied to one Neon branch is not applied to another.** Every branch needs its own `migrate deploy`, and the resulting error never names which database is out of sync.
@@ -122,11 +189,13 @@ Hundreds of rules will be hand-entered. This is where the project succeeds or qu
 
 ```
 ├── AGENTS.md              ← you are here
+├── CLAUDE.md              ← one line: points Claude Code at AGENTS.md
 ├── README.md              ← public-facing project description
 ├── LICENSE                ← MIT
 ├── .env.example           ← copy to .env, never commit .env
+├── prisma.config.ts       ← Prisma 7 config: connection URL, seed command
 ├── prisma/
-│   ├── schema.prisma      ← the data model
+│   ├── schema.prisma      ← the data model (provider only; no URL — see §6)
 │   └── seed.ts            ← qualification/MQF backbone
 ├── docs/
 │   ├── decision-log.md    ← dated record of non-trivial choices + reasoning
@@ -136,7 +205,9 @@ Hundreds of rules will be hand-entered. This is where the project succeeds or qu
 ├── scripts/               ← standalone tooling (see gotcha re: DATABASE_URL)
 └── src/
     ├── app/               ← Next.js App Router
-    ├── lib/               ← pure logic, kept separate from I/O for testability
+    ├── generated/prisma/  ← generated client, gitignored, rebuilt on build
+    ├── lib/
+    │   └── db.ts          ← the ONLY place a PrismaClient is constructed
     └── components/
 ```
 
@@ -151,3 +222,14 @@ Append a short entry per working session. Newest at the bottom.
 | Date | Who | What changed |
 |---|---|---|
 | (scaffold) | Claude (chat) | Repository created: docs, schema draft, no code run |
+| 2026-08-19 | Claude (Claude Code) | `git init`. Next 16.3.1 scaffold merged. Deps installed. Prisma 7 wired up (`prisma.config.ts`, `prisma-client` generator, Neon driver adapter in `src/lib/db.ts`). `prisma validate` passes, build/typecheck/lint pass, dev server serves `/`. **Stopped at: Neon project not created, no migration run.** |
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

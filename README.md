@@ -17,7 +17,9 @@ Not "what should I do after SPM" — there is no shortage of that content, and e
 
 ## Status
 
-**Week 0 — scaffolded, not built.** Nothing in this repository has been run. See `AGENTS.md` for current status and next steps.
+**Week 0 — scaffold verified, database not yet created.** The app builds and runs
+locally and the Prisma schema validates, but no migration has been applied and
+there is no data. See `AGENTS.md` for current status and next steps.
 
 ## Why this exists
 
@@ -59,17 +61,20 @@ Deliberately the same as its predecessor project (`campus-marketplace`), so that
 # 1. Install
 npm install
 
+#    npm 11 skips install scripts by default and still exits 0. If you see a
+#    `npm warn allow-scripts` block, the Prisma engines and esbuild never
+#    unpacked — approve them and install again:
+npm approve-scripts prisma @prisma/engines esbuild unrs-resolver && npm install
+
 # 2. Environment
 cp .env.example .env
 #    Then fill in DATABASE_URL from your Neon development branch.
 
 # 3. Validate the schema
-#    NOTE: the schema was drafted without network access and has never been
-#    checked by the Prisma CLI. Expect to fix things here.
 npx prisma validate
 
 # 4. Migrate
-npx prisma migrate dev --name init
+npm run db:migrate -- --name init
 
 # 5. Seed the qualification / MQF backbone
 npm run seed
@@ -77,6 +82,10 @@ npm run seed
 # 6. Run
 npm run dev
 ```
+
+Note that `npm run typecheck` fails on a fresh clone until `npm run build` or
+`npm run dev` has run once — Next generates route types into `.next/types` that
+`tsconfig.json` includes.
 
 ### A warning about scripts
 
