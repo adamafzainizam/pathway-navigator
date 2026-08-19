@@ -10,12 +10,17 @@
 // without network access. Verify before trusting it.
 
 generator client {
-  provider = "prisma-client-js"
+  // Prisma 7's current generator. The legacy `prisma-client-js` still works in
+  // 7.x but is removed in 8.x, and it writes into node_modules, which hides
+  // staleness. This one emits to a visible path instead.
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Prisma 7: the connection URL lives in prisma.config.ts, not here. The
+  // runtime client gets its connection via a driver adapter (src/lib/db.ts).
 }
 
 // ---------------------------------------------------------------------------
@@ -64,6 +69,24 @@ enum AccreditationStatus {
   UNKNOWN
 }
 
+/// Whether the MQF assigns this qualification a level at all.
+///
+/// Verified 2026-08-19 against the MQF 2nd Edition: the framework states
+/// outright that foundation programmes, STPM, Matriculation and A Levels
+/// "are not included in the Framework", and it never mentions SPM. Those are
+/// real, widely held qualifications — they are simply outside the framework.
+///
+/// NOT_IN_FRAMEWORK means: checked, and MQA deliberately assigns no level.
+/// UNKNOWN means: nobody has verified this row against a source document.
+/// Collapsing those two into a plausible-looking integer is how a reference
+/// site starts asserting things its own sources refuse to assert. Same
+/// discipline as AccreditationStatus — see AGENTS.md §7.
+enum MqfStatus {
+  ASSIGNED
+  NOT_IN_FRAMEWORK
+  UNKNOWN
+}
+
 /// CREDIT_TRANSFER and CREDIT_EXEMPTION are NOT the same thing and the difference
 /// costs students a semester: an exemption lets you skip a subject, but the credits
 /// may not count toward graduation, so the student still needs another elective to
@@ -92,8 +115,15 @@ model Qualification {
   nameEn String
   nameMs String
 
-  /// The spine of the whole system. Everything anchors to MQF level.
-  mqfLevel Int
+  /// The spine of the whole system — but nullable, because not every
+  /// qualification has one. Read it together with `mqfStatus`; a level is only
+  /// a claim about the framework when the status is ASSIGNED.
+  ///
+  /// A level may also be present while the status is UNKNOWN: that is a drafted
+  /// value nobody has checked yet, and the UI must not render it as fact.
+  mqfLevel Int?
+
+  mqfStatus MqfStatus @default(UNKNOWN)
 
   category         QualificationCategory
   awardingBodyType AwardingBodyType
@@ -108,6 +138,7 @@ model Qualification {
   updatedAt DateTime @updatedAt
 
   @@index([mqfLevel])
+  @@index([mqfStatus])
   @@index([category])
 }
 
