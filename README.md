@@ -1,5 +1,20 @@
 # Pathway Navigator
 
+> ## ⚠️ Discontinued — August 2026
+>
+> This project was stopped after its central premise failed a reality check:
+> Malaysian credit transfer caps are set by a national MOHE/MQA baseline that
+> institutions restate, not chosen per institution — so a database organised
+> around per-institution caps had little to offer.
+>
+> **[Read the post-mortem](docs/post-mortem.md)** for what was built, what was
+> learned, and the one cheap question that would have settled it in an afternoon.
+>
+> The code works: three CHECK constraints Prisma cannot express, verified live;
+> 31 tests; three institutions transcribed with full provenance. It is kept as a
+> record, not as a product.
+
+
 > **Working name.** The public-facing name is not yet chosen and will likely be in Bahasa Melayu — see `docs/seo.md`.
 
 A bilingual decoder for the Malaysian credit transfer process.

@@ -1,5 +1,17 @@
 # AGENTS.md
 
+> ## ⚠️ PROJECT DISCONTINUED — 2026-08-20
+>
+> This project was stopped deliberately after its central premise was tested and
+> did not hold: credit transfer caps turned out to be a national MOHE/MQA
+> baseline that institutions restate, not a per-institution variable.
+>
+> **Read [`docs/post-mortem.md`](docs/post-mortem.md) first.** Everything below
+> is preserved as it stood at the end, including the sections that describe
+> plans that were never carried out. Do not resume work here without reading the
+> post-mortem — several of the assumptions stated below are known to be wrong.
+
+
 **Living status document for this repository.** Whichever AI agent (or human) works on this project reads this first and updates it before finishing a session. This file — not any chat history, not any external memory — is the canonical record.
 
 > This mirrors the `AGENTS.md` practice established in the `campus-marketplace` project, which proved its value repeatedly: session boundaries destroy context, and a file in the repo is the only thing that survives them.
@@ -93,9 +105,10 @@ These are not negotiable without an explicit decision recorded in `docs/decision
 
 ## 3. Current status
 
-**Phase:** Week 1 in progress. The data layer is proven end to end: one real
-institution's published policy is in the database and answers a real question
-with sources and caveats attached.
+**Phase:** DISCONTINUED 2026-08-20. Final state: the data layer works end to
+end and three institutions' policies answer real questions with sources and
+caveats attached. There is no public UI and there never will be. See
+`docs/post-mortem.md`.
 
 **Done:**
 - [x] Repository structure and documentation
