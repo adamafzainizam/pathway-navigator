@@ -382,3 +382,5 @@ coverage grows rather than discovered when rows go stale.
 **`allowScripts` is pinned to exact versions**, so the 7.9.1 approvals for `prisma` and `@prisma/engines` stopped matching and were replaced with 7.10.1 after reading both scripts. Without that, npm would have skipped them silently.
 
 **Not done:** no source change, no feature work, no un-discontinuing. The post-mortem still stands.
+
+**Guardrail:** `.github/dependabot.yml` (weekly npm, minor and patch grouped). It opens PRs only and never merges. Dependabot security updates are a repo setting, not a file.

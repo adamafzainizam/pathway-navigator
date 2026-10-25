@@ -117,7 +117,9 @@ vulnerable lockfile in a private repo is cheap to fix and expensive to forget.
 `npm audit fix`. `npm audit` 11 findings (10 high, 1 critical) → 0; 31 tests before
 and after; typecheck, lint and build clean. The 16.3.1 and 7.9.1 mentions further
 down are history and were left as written. Nothing is deployed (see the
-post-mortem), so there is no preview to check.
+post-mortem), so there is no preview to check. The same PR adds
+`.github/dependabot.yml` (weekly npm) so the lockfile does not rot again; turn on
+Dependabot security updates in the repo settings if you want advisories as PRs.
 
 **Done:**
 - [x] Repository structure and documentation
