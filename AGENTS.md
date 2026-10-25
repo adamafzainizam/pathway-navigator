@@ -110,6 +110,15 @@ end and three institutions' policies answer real questions with sources and
 caveats attached. There is no public UI and there never will be. See
 `docs/post-mortem.md`.
 
+**Dependency update, 2026-10-25 (branch `chore/security-oct-2026`):** the project is
+discontinued but the dependencies were brought current anyway, because a
+vulnerable lockfile in a private repo is cheap to fix and expensive to forget.
+`next` / `eslint-config-next` 16.3.1 → 16.4.3 (exact), Prisma trio 7.9.1 → 7.10.1,
+`npm audit fix`. `npm audit` 11 findings (10 high, 1 critical) → 0; 31 tests before
+and after; typecheck, lint and build clean. The 16.3.1 and 7.9.1 mentions further
+down are history and were left as written. Nothing is deployed (see the
+post-mortem), so there is no preview to check.
+
 **Done:**
 - [x] Repository structure and documentation
 - [x] Research completed on data sources, saturation, SEO, monetization (see `docs/`)
@@ -365,6 +374,7 @@ Append a short entry per working session. Newest at the bottom.
 | 2026-08-19 | Claude (Claude Code) | Resolved the MQF modelling problem: `mqfLevel` nullable + `MqfStatus` enum + CHECK constraint, migration `mqf_status`. Four wrong rows corrected, six TVET rows flagged `UNKNOWN`. Pure mirror in `src/lib/rules/mqf-level.ts`, 15 tests passing. Week 0 done. |
 | 2026-08-19 | Claude (Claude Code) | GitHub repo created (private, `adamafzainizam`), PR #1 merged. First real institution entered: UTHM credit transfer guidelines, 2 tiered rules, 9 caveats. Pure answer builder + 25 tests; the hard ceiling is now a type constraint, not a convention. **Success test passed.** Found a third schema gap: `sourceDocumentDate` cannot say how it knows the date. |
 | 2026-08-19 | Claude (Claude Code) | Added UM and MMU. Found the diploma→bachelor caps are a national MOHE/MQA baseline, not a per-institution variable — the original thesis. **Thesis narrowed to the decoder** (terminology, process traps, publication gaps); coverage target cut from 15–20 institutions to 5–8; data entry paused; moat claim corrected. §1, README, scope.md and seo.md all restated. |
+| 2026-10-25 | Claude (Claude Code) | **October 2026 security update** (branch `chore/security-oct-2026`, PR open, not merged). `next` + `eslint-config-next` → 16.4.3 (exact), `prisma` / `@prisma/client` / `@prisma/adapter-neon` → 7.10.1, `npm audit fix`; audit 11 findings → 0; 31 tests unchanged; typecheck, lint, `npm run build` clean. The `allowScripts` entries pinned to 7.9.1 stopped matching, so `prisma@7.10.1` and `@prisma/engines@7.10.1` were re-approved after reading both scripts (campus-marketplace Gotcha #11/#58 has the detail). No source changed; project stays discontinued. |
 
 <!-- BEGIN:nextjs-agent-rules -->
 
