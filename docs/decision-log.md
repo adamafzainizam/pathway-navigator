@@ -372,3 +372,15 @@ rules one person can honestly re-verify per intake. That number, not build speed
 sets the maximum sustainable size of the dataset, and it should be decided before
 coverage grows rather than discovered when rows go stale.
 
+
+## 2026-10-25 — Dependencies brought current on a discontinued project
+
+**Why touch a stopped project at all.** A dependency review of the builder's repos found `next` 16.3.1 and Prisma 7.9.1 here, carrying 11 `npm audit` findings (10 high, 1 critical). Nothing is deployed, so the practical exposure is the local dev server and the lockfile, but a stale lockfile in a private repo is exactly the thing nobody remembers to fix later, and the fix is a few commands.
+
+**What changed.** `next` and `eslint-config-next` 16.3.1 → 16.4.3 (still exact), `prisma`, `@prisma/client` and `@prisma/adapter-neon` 7.9.1 → 7.10.1, then `npm audit fix`. Result: 0 findings, 31 tests before and after, typecheck, lint and build clean. `react` stays at 19.2.8.
+
+**`allowScripts` is pinned to exact versions**, so the 7.9.1 approvals for `prisma` and `@prisma/engines` stopped matching and were replaced with 7.10.1 after reading both scripts. Without that, npm would have skipped them silently.
+
+**Not done:** no source change, no feature work, no un-discontinuing. The post-mortem still stands.
+
+**Guardrail:** `.github/dependabot.yml` (weekly npm, minor and patch grouped). It opens PRs only and never merges. Dependabot security updates are a repo setting, not a file.
