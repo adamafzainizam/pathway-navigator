@@ -110,6 +110,16 @@ end and three institutions' policies answer real questions with sources and
 caveats attached. There is no public UI and there never will be. See
 `docs/post-mortem.md`.
 
+**Dependency updates:** the project is discontinued but the dependencies were
+brought current anyway, because a vulnerable lockfile in a private repo is
+cheap to fix and expensive to forget. An October 2026 attempt (branch
+`chore/security-oct-2026`, PR #7, `next`/Prisma trio to 16.4.3/7.10.1) was
+opened but never merged. **2026-11-19/21, merged:** `next` 16.3.1 → 16.4.6
+(PR #11, closing critical Next.js RCE advisories — image optimizer, `next/og`
+— affecting every 16.x up to 16.4.4) and `effect` overridden to 3.22.5
+(PR #12, GHSA-7589-6fvf-x4pw ReDoS). `npm audit` reads 0. PR #7 was closed
+unmerged once its content shipped at newer versions through #11/#12. Nothing
+is deployed (see the post-mortem), so there was never a preview to check.
 **Done:**
 - [x] Repository structure and documentation
 - [x] Research completed on data sources, saturation, SEO, monetization (see `docs/`)
@@ -365,6 +375,8 @@ Append a short entry per working session. Newest at the bottom.
 | 2026-08-19 | Claude (Claude Code) | Resolved the MQF modelling problem: `mqfLevel` nullable + `MqfStatus` enum + CHECK constraint, migration `mqf_status`. Four wrong rows corrected, six TVET rows flagged `UNKNOWN`. Pure mirror in `src/lib/rules/mqf-level.ts`, 15 tests passing. Week 0 done. |
 | 2026-08-19 | Claude (Claude Code) | GitHub repo created (private, `adamafzainizam`), PR #1 merged. First real institution entered: UTHM credit transfer guidelines, 2 tiered rules, 9 caveats. Pure answer builder + 25 tests; the hard ceiling is now a type constraint, not a convention. **Success test passed.** Found a third schema gap: `sourceDocumentDate` cannot say how it knows the date. |
 | 2026-08-19 | Claude (Claude Code) | Added UM and MMU. Found the diploma→bachelor caps are a national MOHE/MQA baseline, not a per-institution variable — the original thesis. **Thesis narrowed to the decoder** (terminology, process traps, publication gaps); coverage target cut from 15–20 institutions to 5–8; data entry paused; moat claim corrected. §1, README, scope.md and seo.md all restated. |
+| 2026-10-25 | Claude (Claude Code) | **October 2026 security update** (branch `chore/security-oct-2026`, PR #7, never merged — superseded, see below). `next` + `eslint-config-next` → 16.4.3 (exact), `prisma` / `@prisma/client` / `@prisma/adapter-neon` → 7.10.1, `npm audit fix`; audit 11 findings → 0; 31 tests unchanged; typecheck, lint, `npm run build` clean. The `allowScripts` entries pinned to 7.9.1 stopped matching, so `prisma@7.10.1` and `@prisma/engines@7.10.1` were re-approved after reading both scripts (campus-marketplace Gotcha #11/#58 has the detail). No source changed; project stays discontinued. |
+| 2026-11-19/21 | Claude (claude.ai, cloud session) | **November 2026 security upgrades, two PRs, both merged.** PR #11: `next` 16.3.1 → 16.4.6, closing critical Next.js RCE advisories (image optimizer, `next/og`) affecting every 16.x up to 16.4.4. PR #12: overrode transitive `effect` to 3.22.5 for GHSA-7589-6fvf-x4pw (ReDoS). `npm audit` reads 0 after both. PR #7 (October, above) was closed as redundant rather than merged — nothing deployed, so there was never a preview to check either way. |
 
 <!-- BEGIN:nextjs-agent-rules -->
 
