@@ -42,5 +42,8 @@
     "@prisma/engines@7.9.1": true,
     "esbuild@0.28.2": true,
     "unrs-resolver@1.12.2": true
+  },
+  "overrides": {
+    "effect": "^3.22.5"
   }
 }
